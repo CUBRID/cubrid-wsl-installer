@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization xmlns="http://schemas.microsoft.com/wix/2006/localization" Culture="en-us" Codepage="65001">
+    <String Id="CUBRID_Welcome_WindowTitle">Welcome to CUBRID WSL Installer</String>
+    <String Id="CUBRID_Welcome_Description">This installer will:&#13;&#10;• Check your system environment&#13;&#10;• Install WSL2 components if needed&#13;&#10;• Install CUBRID image&#13;&#10;• Install CUBRID Service Tray&#13;&#10;&#13;&#10;Click Next to continue.</String>
+
+    <String Id="CUBRID_License_WindowTitle">License Agreement</String>
+    <String Id="CUBRID_License_Description">Please read the following license agreement carefully</String>
+    <String Id="CUBRID_License_CheckboxText">I accept the terms in the License Agreement</String>
+
+    <String Id="CUBRID_Env_WindowTitle">CUBRID WSL - Environment Check</String>
+    <String Id="CUBRID_Env_Description">Results of checking the system environment for CUBRID on WSL2.</String>
+
+    <String Id="CUBRID_Wait_WindowTitle">CUBRID WSL - Environment Check in Progress</String>
+    <String Id="CUBRID_Wait_Description">Environment check is in progress. Please wait a moment.</String>
+
+    <String Id="CUBRID_InstallOptions_WindowTitle">Installation Options</String>
+    <String Id="CUBRID_InstallOptions_Description">Select the mode to install.</String>
+    <String Id="CUBRID_InstallOptions_SelectMode_Label">Select Mode:</String>
+    <String Id="CUBRID_InstallOptions_Internal_Container_Label">Install Internal Container Image</String>
+    <String Id="CUBRID_InstallOptions_Manual_Install_Label">Manual installation</String>
+    <String Id="CUBRID_InstallOptions_Manual_Install_File_Label">Install File:</String>
+    <String Id="CUBRID_InstallOptions_Manual_Install_File_Browse">Browse</String>
+    <String Id="CUBRID_InstallOptions_Default_WSL_Name_Label">WSL Name:</String>
+
+    <String Id="CUBRID_InstallDir_WindowTitle">Installation Directory</String>
+    <String Id="CUBRID_InstallDir_Description">Select the directory to install CUBRID.</String>
+    <String Id="CUBRID_InstallDir_FolderLabel">Installation Directory:</String>
+    <String Id="CUBRID_InstallDir_Change">Change</String>
+
+    <String Id="CUBRID_VerifyReadyDlg_Title">Ready to Install</String>
+    <String Id="CUBRID_VerifyReadyDlg_Description">Click Install to begin installation. Click Back to review or change settings.</String>
+
+    <String Id="CUBRID_Finish_Title">Installation Complete</String>
+    <String Id="CUBRID_Finish_Description">CUBRID WSL installation has been completed.</String>
+    <String Id="CUBRID_Finish_Text">Installation completed successfully.&#13;&#10;You can use CUBRID on WSL.&#13;&#10;You can also manage CUBRID service from the system tray.&#13;&#10;</String>
+    <String Id="CUBRID_Finish_Text2">CUBRID can be used with the following tools:&#13;&#10;&lt;a href="https://www.cubrid.org/downloads"&gt;CUBRID Tools&lt;/a&gt;&#13;&#10;&lt;a href="https://dbeaver.io/"&gt;DBeaver&lt;/a&gt;&#13;&#10;</String>
+    <String Id="CUBRID_Finish_RegisterTrayCheckbox">Register Tray application to Windows Startup</String>
+    <String Id="CUBRID_Finish_StartTrayCheckbox">Start Tray application after installation</String>
+    <String Id="CUBRID_Finish_CreateShortcutCheckbox">Create Desktop Shortcut</String>
+    <String Id="CUBRID_Finish_CreateDemodbCheckbox">Create a sample "demodb" database</String>
+    <String Id="CUBRID_Finish_WSL2ModeCheckbox">Install in WSL2 mode</String>
+
+    <String Id="CUBRID_UserExit_Text">[ProductName] setup was interrupted. Your system has not been modified. To install this program at a later time, run Setup again.</String>
+    <String Id="CUBRID_Install">Install</String>
+    <String Id="CUBRID_Next">Next</String>
+    <String Id="CUBRID_Back">Back</String>
+    <String Id="CUBRID_Cancel">Cancel</String>
+    <String Id="CUBRID_Finish">Finish</String>
+    <String Id="CUBRID_Yes">Yes</String>
+    <String Id="CUBRID_No">No</String>
+
+    <String Id="CUBRID_CustomFatalErrorDlg_TimeoutTitle">{\WixUI_Font_Bigger}Windows built-in feature activation timed out, so installed stop.</String>
+    <String Id="CUBRID_CustomFatalErrorDlg_TimeoutDescription">Windows built-in feature activation timed out.&#13;&#10; 1. Virtual Machine Platform and similar are built-in Windows features, and their activation is performed by Windows, so please check the Windows state.&#13;&#10; 2. BIOS has Intel VT or AMD-V disabled, please enable it and run the installer again.&#13;&#10; 3. If the installation continues to stop even after checking or BIOS settings, you can also install with WSL1 mode by unchecking the WSL2 Mode option in the installation options.&#13;&#10;This option can be selected in the installation options.&#13;&#10;Please run the installation wizard again after resolving the issue.</String>
+    
+    <String Id="CUBRID_CustomCancelDlg_Header">Cancel Installation</String>
+    <String Id="CUBRID_CustomCancelDlg_Description">Are you sure you want to cancel the installation?</String>
+
+    <String Id="CUBRID_Check_Virt_Title">Virtualization Technology Disabled</String>
+    <String Id="CUBRID_Check_Virt_Description">[CPU_BRAND] Virtualization technology is disabled in BIOS.&#13;&#10;&#13;&#10;Update your system or change BIOS settings and Run the installer again.</String>
+    
+    <String Id="CUBRID_Check_WindowsVersion_Title">Windows Version Not Met</String>
+    <String Id="CUBRID_Check_WindowsVersion_Description">Your system does not meet the requirements to run CUBRID on WSL2.&#13;&#10;&#13;&#10;Please check the following:&#13;&#10;• Windows 10 version 2004 (build 19041) or later&#13;&#10;&#13;&#10;Update your system and run the installer again.</String>
+
+    <String Id="CUBRID_Check_AdminRights_Title">Administrator Rights Not Met</String>
+    <String Id="CUBRID_Check_AdminRights_Description">Administrator rights were not obtained. Please check your administrator rights and run the installer again.</String>
+
+    <String Id="CUBRID_Check_WSLInstalled_Title">WSL Installation Not Met</String>
+    <String Id="CUBRID_Check_WSLInstalled_Description">Your system does not meet the requirements to run CUBRID on WSL.&#13;&#10;&#13;&#10;Please check the following:&#13;&#10;• Install WSL2 from &lt;a href="https://github.com/microsoft/WSL/releases"&gt;https://github.com/microsoft/WSL/releases&lt;/a&gt;&#13;&#10; OR &#13;&#10;• Run 'wsl --update' with admin privileges in PowerShell or Command Prompt. &#13;&#10;&#13;&#10;After installation, a reboot is required. &#13;&#10;Please run the installer again after rebooting to confirm.</String>
+    
+    <String Id="CUBRID_Check_WSLRebootRequired_Title">Reboot Required For WSL</String>
+    <String Id="CUBRID_Check_WSLRebootRequired_Description">(Warning) &#13;&#10;WSL required packages are installed but packages that require a reboot are exist.&#13;&#10;&#13;&#10;It is recommended to run the installer again after rebooting. &#13;&#10;Run the installer again after rebooting if installation fails.</String>
+
+    <String Id="CUBRID_FatalErrorDescription1"> An error occurred and [ProductName] installation failed.&#13;&#10; A reboot may be required after enabling WSL features.&#13;&#10;Please run the installer wizard again after rebooting.&#13;&#10;</String>
+
+    <String Id="CUBRID_Error_Feature_Timeout_Description">Enabling Windows built-in features timed out.&#13;&#10;This operation uses the following commands:&#13;&#10;1) dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart;&#13;&#10;2) dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart;&#13;&#10;If it keeps timing out, enable these features manually, reboot, and run the installer again.&#13;&#10;If they still cannot be enabled, uncheck "Install in WSL2 mode" in the installation options and install in WSL1 mode instead.</String>
+
+</WixLocalization> 

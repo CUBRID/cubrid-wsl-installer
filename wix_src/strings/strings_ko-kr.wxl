@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization xmlns="http://schemas.microsoft.com/wix/2006/localization" Culture="ko-kr" Codepage="65001">
+    <String Id="CUBRID_Welcome_WindowTitle">CUBRID WSL 설치 프로그램 시작</String>
+    <String Id="CUBRID_Welcome_Description">이 프로그램은 다음을 수행합니다:&#13;&#10;• 시스템 환경 검사&#13;&#10;• 필요 시 WSL2 구성요소 설치&#13;&#10;• CUBRID 이미지 설치&#13;&#10;• CUBRID 서비스 트레이 프로그램 설치&#13;&#10;&#13;&#10;다음을 클릭하여 계속합니다.</String>
+
+    <String Id="CUBRID_License_WindowTitle">사용권 계약</String>
+    <String Id="CUBRID_License_Description">다음 사용권 계약을 주의 깊게 읽어 주십시오.</String>
+    <String Id="CUBRID_License_CheckboxText">사용권 계약에 동의합니다</String>
+
+    <String Id="CUBRID_Env_WindowTitle">CUBRID WSL - 환경 점검</String>
+    <String Id="CUBRID_Env_Description">WSL2에서 CUBRID 실행 환경을 검사한 결과입니다.</String>
+
+    <String Id="CUBRID_Wait_WindowTitle">CUBRID WSL - 환경 점검 중</String>
+    <String Id="CUBRID_Wait_Description">환경 점검 중입니다. 잠시만 기다려주세요.</String>
+
+    <String Id="CUBRID_InstallOptions_WindowTitle">설치 옵션</String>
+    <String Id="CUBRID_InstallOptions_Description">WSL 이름과 옵션을 설정하세요.</String>
+    <String Id="CUBRID_InstallOptions_SelectMode_Label">설치 모드:</String>
+    <String Id="CUBRID_InstallOptions_Internal_Container_Label">설치파일에 내장된 컨테이너 이미지 설치</String>
+    <String Id="CUBRID_InstallOptions_Manual_Install_Label">수동 설치</String>
+    <String Id="CUBRID_InstallOptions_Manual_Install_File_Label">설치 파일 선택:</String>
+    <String Id="CUBRID_InstallOptions_Manual_Install_File_Browse">찾아보기</String>
+    <String Id="CUBRID_InstallOptions_Default_WSL_Name_Label">WSL 이름:</String>
+
+    <String Id="CUBRID_InstallDir_WindowTitle">설치 경로</String>
+    <String Id="CUBRID_InstallDir_Description">CUBRID를 설치할 경로를 선택하세요.</String>
+    <String Id="CUBRID_InstallDir_FolderLabel">설치 경로:</String>
+    <String Id="CUBRID_InstallDir_Change">변경</String>
+
+    <String Id="CUBRID_VerifyReadyDlg_Title">설치 준비 확인</String>
+    <String Id="CUBRID_VerifyReadyDlg_Description">설치 준비가 완료되었습니다. 설치를 시작하시겠습니까?&#13;&#10;&#13;&#10;설정 변경을 원하시면 뒤로 버튼을 클릭하여 변경하세요.</String>
+
+    <String Id="CUBRID_Finish_Title">완료</String>
+    <String Id="CUBRID_Finish_Description">CUBRID WSL 설치가 완료되었습니다.</String>
+    <String Id="CUBRID_Finish_Text">설치가 성공적으로 완료되었습니다.&#13;&#10;WSL에서 CUBRID를 사용 할 수 있습니다.&#13;&#10;또한&#13;&#10;시스템 트레이에서 CUBRID 서비스를 관리할 수 있습니다.&#13;&#10;</String>
+    <String Id="CUBRID_Finish_Text2">CUBRID은 아래와 같은 도구를 사용할 수 있습니다.&#13;&#10;&lt;a href="https://www.cubrid.com/downloads"&gt;CUBRID Tools&lt;/a&gt;&#13;&#10;&lt;a href="https://dbeaver.io/"&gt;DBeaver&lt;/a&gt;</String>
+    <String Id="CUBRID_Finish_RegisterTrayCheckbox">자동 실행 목록에 Tray 애플리케이션 등록</String>
+    <String Id="CUBRID_Finish_StartTrayCheckbox">설치 완료 후 Tray 애플리케이션 실행</String>
+    <String Id="CUBRID_Finish_CreateShortcutCheckbox">바탕화면 바로가기 생성</String>
+    <String Id="CUBRID_Finish_CreateDemodbCheckbox">샘플 "demodb" 데이터베이스 생성</String>
+    <String Id="CUBRID_Finish_WSL2ModeCheckbox">WSL2 모드로 설치</String>
+
+    <String Id="CUBRID_UserExit_Text">[ProductName] 설치가 중단되었습니다. 시스템은 변경되지 않았습니다. 나중에 다시 설치하려면 Setup을 다시 실행하세요.</String>
+    <String Id="CUBRID_Install">설치</String>
+    <String Id="CUBRID_Next">다음</String>
+    <String Id="CUBRID_Back">뒤로</String>
+    <String Id="CUBRID_Cancel">취소</String>
+    <String Id="CUBRID_Finish">완료</String>
+    <String Id="CUBRID_Yes">예</String>
+    <String Id="CUBRID_No">아니오</String>
+
+    <String Id="CUBRID_CustomFatalErrorDlg_TimeoutTitle">{\WixUI_Font_Bigger}Windows 내장 기능 활성화 작업 시간이 초과되어 설치가 중단 되었습니다.</String>
+    <String Id="CUBRID_CustomFatalErrorDlg_TimeoutDescription"> 1. Virtual Machine Platform 등은 Windows 내장 기능이며, 그 활성화 동작은 Windows가 수행하므로 Windows 상태를 점검하세요.&#13;&#10; 2. BIOS에서 Intel VT 또는 AMD-V가 비활성화되어 있다면 활성화한 뒤 설치 프로그램을 다시 실행하세요.&#13;&#10; 3. 확인 및 BIOS 설정 후에도 설치가 계속 멈춘다면, 설치 옵션에서 WSL2 모드 옵션을 체크 해제하여 WSL1 모드로 설치할 수도 있습니다.&#13;&#10;이 옵션은 설치 옵션에서 선택할 수 있습니다.&#13;&#10;문제해결 후 설치 마법사를 다시 실행하십시오.</String>
+
+    <String Id="CUBRID_CustomCancelDlg_Header">설치 취소</String>
+    <String Id="CUBRID_CustomCancelDlg_Description">설치를 취소하시겠습니까?</String>
+
+    <String Id="CUBRID_Check_Virt_Title">가상화 기술 비활성화</String>
+    <String Id="CUBRID_Check_Virt_Description">[CPU_BRAND] 가상화 기술이 BIOS에서 비활성화되어 있습니다. 활성화하고 설치 프로그램을 다시 실행하세요.</String>
+
+    <String Id="CUBRID_Check_WindowsVersion_Title">Windows 버전 문제</String>
+    <String Id="CUBRID_Check_WindowsVersion_Description">WSL에서 CUBRID를 실행하기 위한 시스템 요구 사항이 충족되지 않았습니다.&#13;&#10;&#13;&#10;다음을 확인하세요:&#13;&#10;• Windows 10 버전 2004 (빌드 19041) 이상&#13;&#10;&#13;&#10;시스템을 업데이트하고 다시 실행하세요.</String>
+
+    <String Id="CUBRID_Check_AdminRights_Title">관리자 권한 문제</String>
+    <String Id="CUBRID_Check_AdminRights_Description">관리자 권한 획득에 문제가 발생했습니다. 관리자 권한을 확인한 뒤 설치 프로그램을 다시 실행하세요.</String>
+
+    <String Id="CUBRID_Check_WSLInstalled_Title">WSL 미설치</String>
+    <String Id="CUBRID_Check_WSLInstalled_Description">WSL에서 CUBRID를 실행하기 위한 시스템 요구 사항이 충족되지 않았습니다.&#13;&#10;&#13;&#10;다음을 확인하세요:&#13;&#10;링크에서 &lt;a href="https://github.com/microsoft/WSL/releases"&gt;WSL&lt;/a&gt;를 설치하거나&#13;&#10;또는 &#13;&#10;PowerShell 또는 Command Prompt를 관리자 권한으로 실행하여 wsl --update 명령을 실행하세요. &#13;&#10;&#13;&#10;설치 후에는 재부팅이 필요합니다. 그리고 재부팅 후 설치 프로그램을 다시 실행하세요.</String>
+
+    <String Id="CUBRID_Check_WSLRebootRequired_Title">WSL 재부팅 필요</String>
+    <String Id="CUBRID_Check_WSLRebootRequired_Description">(경고) &#13;&#10;WSL 필요한 패키지가 설치되어 있지만 재부팅이 필요한 패키지가 있습니다.&#13;&#10;&#13;&#10;재부팅 후 다시 설치 프로그램을 실행하는 것을 권장합니다. &#13;&#10;설치 실패 시 재부팅 후 다시 설치 프로그램을 실행하세요.</String>
+
+    <String Id="CUBRID_FatalErrorDescription1"> 오류가 발생하여 [ProductName] 설치에 실패했습니다.&#13;&#10; WSL기능 활성화 후 재부팅이 필요 할 수 있습니다.&#13;&#10; 재부팅후에 설치 마법사를 다시 실행하십시오.&#13;&#10;</String>
+
+    <String Id="CUBRID_Error_Feature_Timeout_Description">Windows 내장 기능 활성화 작업 시간이 초과되었습니다.&#13;&#10;해당 작업에는 아래와 같은 명령어를 사용합니다.&#13;&#10;1) dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart;&#13;&#10;2) dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart;&#13;&#10;계속해서 타임아웃이 발생할 경우 수동으로 활성화한 뒤 재부팅하고 설치 프로그램을 다시 실행하세요.&#13;&#10;계속 활성화되지 않을 경우 설치 옵션에서 WSL2 모드를 체크 해제하여 WSL1 모드로 설치할 수도 있습니다.</String>
+
+</WixLocalization> 

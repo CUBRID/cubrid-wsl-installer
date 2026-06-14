@@ -1,0 +1,12 @@
+# Windows batch scripts MUST use CRLF line endings.
+# CMD seeks `call :label` / `goto` by byte offset; LF endings cause the
+# intermittent "The system cannot find the batch label specified" error.
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+
+# Windows PowerShell scripts use CRLF.
+*.ps1   text eol=crlf
+
+# Shell scripts run inside WSL/Linux and MUST keep LF line endings.
+*.sh    text eol=lf
+*.bash  text eol=lf
