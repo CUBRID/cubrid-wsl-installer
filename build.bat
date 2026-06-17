@@ -12,9 +12,9 @@ set BUILD_TYPE=0
 set CUBRID_VERSION=11.4
 set IMAGE_COPY_OPTION=1
 set SHELL_DIR=%~dp0
-set BUILD_DIR=%SHELL_DIR%\build
-set OS_IMAGE_DIR=%SHELL_DIR%\os_image
-set VERSION_FILE=%SHELL_DIR%\VERSION
+set BUILD_DIR=%SHELL_DIR%build\
+set OS_IMAGE_DIR=%SHELL_DIR%os_image\
+set VERSION_FILE=%SHELL_DIR%VERSION
 set COPY_IMAGE_TAR_GZ_FILE=cubrid-wsl2-%CUBRID_VERSION%.tar.gz
 set INSTALL_IMAGE_TAR_GZ_FILE=cubrid-wsl2-latest.tar.gz
 set WIX_DIR=C:\Program Files (x86)\WiX Toolset v3.14\bin
@@ -99,7 +99,7 @@ if %errorLevel% neq 0 (
 echo [INFO] CMake is available.
 
 for /f %%i IN (%VERSION_FILE%) do set VERSION=%%i
-if EXIST "%SHELL_DIR%\.git" (
+if EXIST "%SHELL_DIR%.git" (
   for /f "delims=" %%i in ('"%GIT_PATH%" rev-list --count --all') do set EXTRA_VERSION=0000%%i
   set EXTRA_VERSION=!EXTRA_VERSION:~-4!
 ) else (
@@ -117,8 +117,8 @@ set MSI_FILE_NAME=CUBRID-%CUBRID_VERSION%-For-WSL-%VERSION%-%EXTRA_VERSION%-win6
 if "%BUILD_TYPE%"=="3" (
     call :EXE_BUILD
     GOTO :EOF
-) else if "%BUILD_TYPE%"== "2" (
-    set IMAGE_COPY_OPTION 0
+) else if "%BUILD_TYPE%"=="2" (
+    set IMAGE_COPY_OPTION=0
 )
 echo [INFO] Image Copy : %IMAGE_COPY_OPTION%
 
@@ -132,15 +132,15 @@ if not exist "%OS_IMAGE_DIR%" (
 
 if "%IMAGE_COPY_OPTION%"=="1" (
     echo [INFO] Deleting install image...
-    if exist "%OS_IMAGE_DIR%\%INSTALL_IMAGE_TAR_GZ_FILE%" (
-        del "%OS_IMAGE_DIR%\%INSTALL_IMAGE_TAR_GZ_FILE%"
+    if exist "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%" (
+        del "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%"
         echo [INFO] %INSTALL_IMAGE_TAR_GZ_FILE% deleted.
     )
 )
 
-if not exist "%OS_IMAGE_DIR%\%INSTALL_IMAGE_TAR_GZ_FILE%" (
+if not exist "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%" (
     echo [INFO] Copy local image...
-    copy "%SHELL_DIR%\make_image\targz_images\%COPY_IMAGE_TAR_GZ_FILE%" "%OS_IMAGE_DIR%\%INSTALL_IMAGE_TAR_GZ_FILE%" >nul
+    copy "%SHELL_DIR%make_image\targz_images\%COPY_IMAGE_TAR_GZ_FILE%" "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%" >nul
     echo [INFO] %COPY_IMAGE_TAR_GZ_FILE% copied.
 ) else (
     echo [INFO] %INSTALL_IMAGE_TAR_GZ_FILE% already exists.
@@ -177,7 +177,7 @@ if "%BUILD_TYPE%"=="2" (
 )
 
 echo [INFO] Copying license file to build directory...
-copy "%SHELL_DIR%\resources\license.rtf" "license.rtf" >nul
+copy "%SHELL_DIR%resources\license.rtf" "license.rtf" >nul
 if %errorLevel% neq 0 (
     echo [ERROR] Failed to copy license file.
     pause
@@ -185,7 +185,7 @@ if %errorLevel% neq 0 (
 )
 
 echo [INFO] Copying Custom Action DLL to current directory for WiX...
-copy "%BUILD_DIR%\Release\CubridCustomActions.dll" "%BUILD_DIR%\CubridCustomActions.dll" >nul
+copy "%BUILD_DIR%Release\CubridCustomActions.dll" "%BUILD_DIR%\CubridCustomActions.dll" >nul
 if %errorLevel% neq 0 (
     echo [ERROR] Failed to copy Custom Action DLL.
     pause
@@ -193,27 +193,27 @@ if %errorLevel% neq 0 (
 )
 
 echo [INFO] Creating wix directory for object files...
-if not exist "%BUILD_DIR%\wix" (
+if not exist "%BUILD_DIR%wix" (
     echo [INFO] Creating wix directory for object files...
-    mkdir "%BUILD_DIR%\wix"
+    mkdir "%BUILD_DIR%wix"
 )
 
 echo [INFO] Building MSI installer using WiX 3.14.1 (candle + light)...
 echo [INFO] Building .wxs to .wixobj...
 echo [INFO] Using generated cubrid_wsl.wxs from build directory...
-"%CANDLE_PATH%" -arch x64 -out %BUILD_DIR%\wix\ ^
+"%CANDLE_PATH%" -arch x64 -out %BUILD_DIR%wix\ ^
   -ext WixUtilExtension ^
-  -dSourceDir=%BUILD_DIR%\Release -dProjectDir=%SHELL_DIR% -dConfiguration=Release ^
-  %BUILD_DIR%\cubrid_wsl.wxs %SHELL_DIR%\wix_src\cubrid_wsl_ui.wxs
+  -dSourceDir=%BUILD_DIR%Release -dProjectDir=%SHELL_DIR% -dConfiguration=Release ^
+  %BUILD_DIR%cubrid_wsl.wxs %SHELL_DIR%wix_src\cubrid_wsl_ui.wxs
 if %errorlevel% neq 0 goto :FAIL
 
 echo [INFO] Building Base MSI (en-us)...
-"%LIGHT_PATH%" -out %BUILD_DIR%\CUBRID_Base.msi ^
+"%LIGHT_PATH%" -out %BUILD_DIR%CUBRID_Base.msi ^
   -ext WixUIExtension ^
   -ext WixUtilExtension ^
-  -loc %SHELL_DIR%\wix_src\strings\strings_en-us.wxl ^
-  -pdbout %BUILD_DIR%\wix\cubrid_base.pdb ^
-  %BUILD_DIR%\wix\cubrid_wsl.wixobj %BUILD_DIR%\wix\cubrid_wsl_ui.wixobj
+  -loc %SHELL_DIR%wix_src\strings\strings_en-us.wxl ^
+  -pdbout %BUILD_DIR%wix\cubrid_base.pdb ^
+  %BUILD_DIR%wix\cubrid_wsl.wixobj %BUILD_DIR%wix\cubrid_wsl_ui.wixobj
 if %errorlevel% neq 0 goto :FAIL
 
 echo [INFO] Building Target MSI (ko-kr) for transform...
@@ -221,7 +221,7 @@ echo [INFO] Building Target MSI (ko-kr) for transform...
   -ext WixUIExtension ^
   -ext WixUtilExtension ^
   -cultures:ko-kr ^
-  -loc %SHELL_DIR%\wix_src\strings\strings_ko-kr.wxl ^
+  -loc %SHELL_DIR%wix_src\strings\strings_ko-kr.wxl ^
   -pdbout %BUILD_DIR%\wix\cubrid_ko.pdb ^
   %BUILD_DIR%\wix\cubrid_wsl.wixobj %BUILD_DIR%\wix\cubrid_wsl_ui.wixobj
 if %errorlevel% neq 0 goto :FAIL
@@ -271,7 +271,7 @@ if exist wix\bundle.wixobj (
     echo [INFO] wix\bundle.wixobj already exists. Deleting...
     del wix\bundle.wixobj
 )
-"%CANDLE_PATH%" -arch x64 -out wix\bundle.wixobj -ext WixBalExtension -ext WixUtilExtension ..\wix_src\bundle.wxs
+"%CANDLE_PATH%" -arch x64 -out wix\bundle.wixobj -ext WixBalExtension -ext WixUtilExtension %SHELL_DIR%wix_src\bundle.wxs
 if %errorlevel% neq 0 goto :FAIL
 "%LIGHT_PATH%" -out %INSTALL_FILE_NAME% -ext WixBalExtension -ext WixUtilExtension wix\bundle.wixobj
 if %errorlevel% neq 0 goto :FAIL
