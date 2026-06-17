@@ -271,7 +271,7 @@ if exist wix\bundle.wixobj (
     echo [INFO] wix\bundle.wixobj already exists. Deleting...
     del wix\bundle.wixobj
 )
-"%CANDLE_PATH%" -arch x64 -out wix\bundle.wixobj -ext WixBalExtension -ext WixUtilExtension %SHELL_DIR%wix_src\bundle.wxs
+"%CANDLE_PATH%" -arch x64 -out wix\bundle.wixobj -ext WixBalExtension -ext WixUtilExtension -dProjectDir=%SHELL_DIR% %SHELL_DIR%wix_src\bundle.wxs
 if %errorlevel% neq 0 goto :FAIL
 "%LIGHT_PATH%" -out %INSTALL_FILE_NAME% -ext WixBalExtension -ext WixUtilExtension wix\bundle.wixobj
 if %errorlevel% neq 0 goto :FAIL

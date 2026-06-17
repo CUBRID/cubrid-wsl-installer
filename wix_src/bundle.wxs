@@ -7,7 +7,7 @@
             Version="1.0.0" 
             Manufacturer="CUBRID" 
             UpgradeCode="{B8A5F3E1-2C4D-4F9A-8E7B-6A5C9D3E2F1A}"
-            IconSourceFile="..\..\resources\cubrid_icon.ico"
+            IconSourceFile="$(var.ProjectDir)resources\cubrid_icon.ico"
             DisableModify="yes"
             DisableRemove="no">
 
@@ -25,11 +25,11 @@
         <BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.HyperlinkLicense">
             <bal:WixStandardBootstrapperApplication
                 LicenseUrl=""
-                LogoFile="..\..\resources\cubrid_logo.png"
-                ThemeFile="..\wix_src\BundleTheme.xml"
-                LocalizationFile="..\wix_src\strings\BundleTheme_en-us.wxl" />
-            <Payload Name="1033\thm.wxl" SourceFile="..\wix_src\strings\BundleTheme_en-us.wxl" />
-            <Payload Name="1042\thm.wxl" SourceFile="..\wix_src\strings\BundleTheme_ko-kr.wxl" />
+                LogoFile="$(var.ProjectDir)resources\cubrid_logo.png"
+                ThemeFile="$(var.ProjectDir)wix_src\BundleTheme.xml"
+                LocalizationFile="$(var.ProjectDir)wix_src\strings\BundleTheme_en-us.wxl" />
+            <Payload Name="1033\thm.wxl" SourceFile="$(var.ProjectDir)wix_src\strings\BundleTheme_en-us.wxl" />
+            <Payload Name="1042\thm.wxl" SourceFile="$(var.ProjectDir)wix_src\strings\BundleTheme_ko-kr.wxl" />
         </BootstrapperApplicationRef>
         
         <WixVariable Id="WixStdBALanguageId" Value="0" Overridable="yes" />
