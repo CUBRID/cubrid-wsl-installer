@@ -16,8 +16,6 @@
       <ComponentRef Id="NetworkGuideComponent" />
     </Feature>
 
-    <Property Id="ApplicationFolderName" Value="CUBRID-FOR-WSL" />
-    <Property Id="WixAppFolder" Value="ProgramFiles64Folder" />
     <Property Id="DefaultUIFont" Value="WixUI_Font_Normal" />
     <Property Id="CUB_WSL_IMAGE_FILE" Value="@CUB_WSL_IMAGE_FILE@" />
     <Property Id="CUB_WSL_EXTRACT_IMAGE_FILE" Value="@CUB_WSL_EXTRACT_IMAGE_FILE@" />
@@ -129,7 +127,7 @@
 
     <CustomAction Id="ActionRollbackWsl" BinaryKey="CubridCustomActions" DllEntry="UninstallWsl" Execute="rollback" Impersonate="yes" Return="ignore" />
     <CustomAction Id="ActionSetRollbackWslData" Property="ActionRollbackWsl"
-        Value="REGISTRY_KEY=@CUB_REGISTRY_KEY_PATH@" />
+        Value="REGISTRY_KEY=@CUB_REGISTRY_KEY_PATH@;IS_ROLLBACK=1" />
 
     <CustomAction Id="ActionLaunchTrayApp" FileKey="TrayAppExe" ExeCommand="" Return="asyncNoWait" Impersonate="yes" />
     <CustomAction Id="ActionRegisterTrayApp" BinaryKey="CubridCustomActions" DllEntry="RegisterTrayApp" Execute="immediate" Return="ignore" Impersonate="yes" />
@@ -138,13 +136,26 @@
     <CustomAction Id="ActionUpdateInstalledSize" BinaryKey="CubridCustomActions" DllEntry="UpdateInstalledSize" Execute="immediate" Return="ignore" Impersonate="yes" />
     <CustomAction Id="ActionStartCubridService" FileKey="CubridStarterExe" ExeCommand="" Return="asyncNoWait" Impersonate="yes" />
 
+    <CustomAction Id="ActionRegisterTrayAppAuto" BinaryKey="CubridCustomActions" DllEntry="RegisterTrayApp" Execute="deferred" Return="ignore" Impersonate="yes" />
+    <CustomAction Id="ActionCreateShortcutAuto" BinaryKey="CubridCustomActions" DllEntry="CreateShortcut" Execute="deferred" Return="ignore" Impersonate="yes" />
+    <CustomAction Id="ActionCreateDemodbAuto" BinaryKey="CubridCustomActions" DllEntry="CreateDemodbSync" Execute="deferred" Return="ignore" Impersonate="yes" />
+    <CustomAction Id="ActionStartCubridServiceAuto" FileKey="CubridStarterExe" ExeCommand="" Execute="deferred" Return="asyncNoWait" Impersonate="yes" />
+    <CustomAction Id="ActionLaunchTrayAppAuto" FileKey="TrayAppExe" ExeCommand="" Execute="deferred" Return="asyncNoWait" Impersonate="yes" />
+
     <InstallExecuteSequence>
+        <Custom Action="ActionUpdateInstallFolder" After="CostFinalize">NOT Installed AND UILevel &lt; 5</Custom>
         <Custom Action="ActionSetInstallFeaturesData" Before="ActionInstallFeatures">NOT Installed</Custom>
         <Custom Action="ActionInstallFeatures" Before="ActionSetRollbackWslData">NOT Installed</Custom>
         <Custom Action="ActionSetRollbackWslData" Before="ActionRollbackWsl">NOT Installed</Custom>
         <Custom Action="ActionRollbackWsl" Before="ActionSetInstallWslData">NOT Installed</Custom>
         <Custom Action="ActionSetInstallWslData" Before="ActionInstallWsl">NOT Installed</Custom>
-        <Custom Action="ActionInstallWsl" Before="InstallFinalize">NOT Installed</Custom>
+        <Custom Action="ActionInstallWsl" Before="ActionRegisterTrayAppAuto">NOT Installed</Custom>
+
+        <Custom Action="ActionRegisterTrayAppAuto" Before="ActionCreateShortcutAuto">NOT Installed AND UILevel &lt; 5 AND REG_TRAY_APP="1"</Custom>
+        <Custom Action="ActionCreateShortcutAuto" Before="ActionCreateDemodbAuto">NOT Installed AND UILevel &lt; 5 AND CREATE_SHORTCUT="1"</Custom>
+        <Custom Action="ActionCreateDemodbAuto" Before="ActionStartCubridServiceAuto">NOT Installed AND UILevel &lt; 5 AND CREATE_DEMODB="1"</Custom>
+        <Custom Action="ActionStartCubridServiceAuto" Before="ActionLaunchTrayAppAuto">NOT Installed AND UILevel &lt; 5</Custom>
+        <Custom Action="ActionLaunchTrayAppAuto" Before="InstallFinalize">NOT Installed AND UILevel &lt; 5 AND START_TRAY_APP="1"</Custom>
 
         <Custom Action="ActionSetUninstallWslData" After="InstallInitialize">REMOVE="ALL"</Custom>
         <Custom Action="ActionUninstallWsl" After="ActionSetUninstallWslData">REMOVE="ALL"</Custom>

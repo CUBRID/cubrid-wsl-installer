@@ -7,14 +7,10 @@
 class SystemUtil
 {
   public:
-    static std::string ExecuteCommand (const std::string &command);
     static std::string ExecuteCommandWithTimeout (const std::string &command, DWORD timeoutMs = 5000);
-    static std::string ExecutePowerShellCommand (const std::string &command);
-    static std::string ExecuteCommandWithPopen (const std::string &command);
     static bool ExecuteCommandWithoutResult (const std::string &command);
     static bool ExecuteCommandWithoutResultWithTimeout (const std::string &command, DWORD timeoutMs = 10000);
     static HANDLE ExecuteCommandWithOutResultAsync (const std::string &command);
-    static bool IsCommandAvailable (const std::string &command);
 
     static const std::string &GetSystemDir();
 
@@ -22,14 +18,10 @@ class SystemUtil
     static bool CheckRegistryValueExists (const HKEY rootKey, const std::string &keyPath, const std::string &valueName);
     static bool GetRegistryValueString (const HKEY rootKey, const std::string &keyPath, const std::string &valueName,
 					std::string &outValue);
-    static bool GetRegistryValueDWORD (const HKEY rootKey, const std::string &keyPath, const std::string &valueName,
-				       DWORD &outValue);
     static bool SetRegistryValueString (const HKEY rootKey, const std::string &keyPath, const std::string &valueName,
 					const std::string &value);
     static bool SetRegistryValueDWORD (const HKEY rootKey, const std::string &keyPath, const std::string &valueName,
 				       DWORD value);
-    static bool SetRegistryValueBoolean (const HKEY rootKey, const std::string &keyPath, const std::string &valueName,
-					 bool value);
     static bool DeleteRegistryValue (const HKEY rootKey, const std::string &keyPath,
                                      const std::string &valueName);
 

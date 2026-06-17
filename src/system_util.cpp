@@ -86,6 +86,50 @@ namespace
     FreeConsole();
   }
 
+  static bool LaunchCommandHidden (const std::string &command, PROCESS_INFORMATION &pi)
+  {
+    STARTUPINFOA si;
+    ZeroMemory (&si, sizeof (si));
+    si.cb = sizeof (si);
+    ZeroMemory (&pi, sizeof (pi));
+    return CreateProcessA (NULL, (LPSTR)command.c_str(), NULL, NULL, FALSE,
+			   CREATE_NO_WINDOW, NULL, NULL, &si, &pi) != FALSE;
+  }
+
+  static bool OpenOrCreateKeyWrite (HKEY root, const std::string &path, HKEY &outKey)
+  {
+    if (RegOpenKeyExA (root, path.c_str(), 0, KEY_WRITE, &outKey) == ERROR_SUCCESS)
+      {
+	return true;
+      }
+    return RegCreateKeyExA (root, path.c_str(), 0, NULL, REG_OPTION_NON_VOLATILE,
+			    KEY_WRITE, NULL, &outKey, NULL) == ERROR_SUCCESS;
+  }
+
+  static std::wstring Utf8ToWide (const std::string &s)
+  {
+    if (s.empty())
+      {
+	return std::wstring();
+      }
+    int n = MultiByteToWideChar (CP_UTF8, 0, s.data(), (int)s.size(), NULL, 0);
+    std::wstring w (n, L'\0');
+    MultiByteToWideChar (CP_UTF8, 0, s.data(), (int)s.size(), &w[0], n);
+    return w;
+  }
+
+  static std::string WideToUtf8 (const std::wstring &w)
+  {
+    if (w.empty())
+      {
+	return std::string();
+      }
+    int n = WideCharToMultiByte (CP_UTF8, 0, w.data(), (int)w.size(), NULL, 0, NULL, NULL);
+    std::string s (n, '\0');
+    WideCharToMultiByte (CP_UTF8, 0, w.data(), (int)w.size(), &s[0], n, NULL, NULL);
+    return s;
+  }
+
 }
 
 void SystemUtil::BlockChildConsoleInput (DWORD pid)
@@ -112,25 +156,6 @@ void SystemUtil::BlockChildConsoleInput (DWORD pid)
   }).detach();
 }
 
-std::string SystemUtil::ExecuteCommandWithPopen (const std::string &command)
-{
-  FILE *pipe = _popen (command.c_str(), "r");
-  if (!pipe)
-    {
-      return "";
-    }
-
-  std::string result;
-  char buffer[128];
-  while (fgets (buffer, sizeof (buffer), pipe) != NULL)
-    {
-      result += buffer;
-    }
-
-  _pclose (pipe);
-  return result;
-}
-
 const std::string &SystemUtil::GetSystemDir()
 {
   static const std::string dir = []() {
@@ -141,145 +166,54 @@ const std::string &SystemUtil::GetSystemDir()
   return dir;
 }
 
-std::string SystemUtil::ExecutePowerShellCommand (const std::string &command)
-{
-  std::string fullCommand = "powershell -ExecutionPolicy Bypass -Command \"" + command + "\"";
-  return ExecuteCommand (fullCommand);
-}
-
 bool SystemUtil::ExecuteCommandWithoutResult (const std::string &command)
 {
-  STARTUPINFOA si;
   PROCESS_INFORMATION pi;
-  ZeroMemory (&si, sizeof (si));
-  si.cb = sizeof (si);
-  ZeroMemory (&pi, sizeof (pi));
-
-  if (CreateProcessA (NULL, (LPSTR)command.c_str(), NULL, NULL, FALSE,
-		      CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+  if (!LaunchCommandHidden (command, pi))
     {
-
-      WaitForSingleObject (pi.hProcess, INFINITE);
-      DWORD exitCode;
-      GetExitCodeProcess (pi.hProcess, &exitCode);
-      CloseHandle (pi.hProcess);
-      CloseHandle (pi.hThread);
-
-      if (exitCode == 0)
-	{
-	  return true;
-	}
-      else
-	{
-	  return false;
-	}
+      return false;
     }
-  return false;
+
+  WaitForSingleObject (pi.hProcess, INFINITE);
+  DWORD exitCode = 1;
+  GetExitCodeProcess (pi.hProcess, &exitCode);
+  CloseHandle (pi.hProcess);
+  CloseHandle (pi.hThread);
+  return exitCode == 0;
 }
 
 bool SystemUtil::ExecuteCommandWithoutResultWithTimeout (const std::string &command, DWORD timeoutMs)
 {
-  STARTUPINFOA si;
   PROCESS_INFORMATION pi;
-  ZeroMemory (&si, sizeof (si));
-  si.cb = sizeof (si);
-  ZeroMemory (&pi, sizeof (pi));
-
-  if (CreateProcessA (NULL, (LPSTR)command.c_str(), NULL, NULL, FALSE,
-		      CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+  if (!LaunchCommandHidden (command, pi))
     {
+      return false;
+    }
 
-      DWORD waitResult = WaitForSingleObject (pi.hProcess, timeoutMs);
-
-      if (waitResult == WAIT_TIMEOUT)
-	{
-	  TerminateProcess (pi.hProcess, 1);
-	  CloseHandle (pi.hProcess);
-	  CloseHandle (pi.hThread);
-	  return false;
-	}
-
-      DWORD exitCode;
-      GetExitCodeProcess (pi.hProcess, &exitCode);
+  if (WaitForSingleObject (pi.hProcess, timeoutMs) == WAIT_TIMEOUT)
+    {
+      TerminateProcess (pi.hProcess, 1);
       CloseHandle (pi.hProcess);
       CloseHandle (pi.hThread);
-
-      if (exitCode == 0)
-	{
-	  return true;
-	}
-      else
-	{
-	  return false;
-	}
+      return false;
     }
-  return false;
+
+  DWORD exitCode = 1;
+  GetExitCodeProcess (pi.hProcess, &exitCode);
+  CloseHandle (pi.hProcess);
+  CloseHandle (pi.hThread);
+  return exitCode == 0;
 }
 
 HANDLE SystemUtil::ExecuteCommandWithOutResultAsync (const std::string &command)
 {
-  STARTUPINFOA si;
   PROCESS_INFORMATION pi;
-  ZeroMemory (&si, sizeof (si));
-  si.cb = sizeof (si);
-  ZeroMemory (&pi, sizeof (pi));
-
-  if (CreateProcessA (NULL, (LPSTR)command.c_str(), NULL, NULL, FALSE,
-		      CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+  if (!LaunchCommandHidden (command, pi))
     {
-      CloseHandle (pi.hThread);
-      return pi.hProcess;
+      return NULL;
     }
-  return NULL;
-}
-
-std::string SystemUtil::ExecuteCommand (const std::string &command)
-{
-  SECURITY_ATTRIBUTES sa;
-  sa.nLength = sizeof (SECURITY_ATTRIBUTES);
-  sa.bInheritHandle = TRUE;
-  sa.lpSecurityDescriptor = NULL;
-
-  HANDLE hReadPipe, hWritePipe;
-  if (!CreatePipe (&hReadPipe, &hWritePipe, &sa, 0))
-    {
-      return "";
-    }
-
-  SetHandleInformation (hReadPipe, HANDLE_FLAG_INHERIT, 0);
-
-  STARTUPINFOA si;
-  PROCESS_INFORMATION pi;
-  ZeroMemory (&si, sizeof (si));
-  si.cb = sizeof (si);
-  si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
-  si.hStdOutput = hWritePipe;
-  si.hStdError = hWritePipe;
-  si.wShowWindow = SW_HIDE;
-
-  ZeroMemory (&pi, sizeof (pi));
-
-  std::string result;
-  if (CreateProcessA (NULL, (LPSTR)command.c_str(), NULL, NULL, TRUE,
-		      CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
-    {
-      CloseHandle (hWritePipe);
-
-      char buffer[4096];
-      DWORD bytesRead;
-      while (ReadFile (hReadPipe, buffer, sizeof (buffer) - 1, &bytesRead, NULL) && bytesRead > 0)
-	{
-	  buffer[bytesRead] = '\0';
-	  result += buffer;
-	}
-
-      WaitForSingleObject (pi.hProcess, INFINITE);
-      CloseHandle (pi.hProcess);
-      CloseHandle (pi.hThread);
-    }
-
-  CloseHandle (hReadPipe);
-  return result;
+  CloseHandle (pi.hThread);
+  return pi.hProcess;
 }
 
 std::string SystemUtil::ExecuteCommandWithTimeout (const std::string &command, DWORD timeoutMs)
@@ -308,44 +242,40 @@ std::string SystemUtil::ExecuteCommandWithTimeout (const std::string &command, D
 
   ZeroMemory (&pi, sizeof (pi));
 
-  std::string result;
-  if (CreateProcessA (NULL, (LPSTR)command.c_str(), NULL, NULL, TRUE,
-		      CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+  if (!CreateProcessA (NULL, (LPSTR)command.c_str(), NULL, NULL, TRUE,
+		       CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
     {
+      CloseHandle (hReadPipe);
       CloseHandle (hWritePipe);
-
-      DWORD waitResult = WaitForSingleObject (pi.hProcess, timeoutMs);
-
-      if (waitResult == WAIT_TIMEOUT)
-	{
-	  TerminateProcess (pi.hProcess, 1);
-	  CloseHandle (pi.hProcess);
-	  CloseHandle (pi.hThread);
-	  CloseHandle (hReadPipe);
-	  return "";
-	}
-
-      char buffer[4096];
-      DWORD bytesRead;
-      while (ReadFile (hReadPipe, buffer, sizeof (buffer) - 1, &bytesRead, NULL) && bytesRead > 0)
-	{
-	  buffer[bytesRead] = '\0';
-	  result += buffer;
-	}
-
-      CloseHandle (pi.hProcess);
-      CloseHandle (pi.hThread);
+      return "";
     }
 
-  CloseHandle (hReadPipe);
-  return result;
-}
+  CloseHandle (hWritePipe);
 
-bool SystemUtil::IsCommandAvailable (const std::string &command)
-{
-  std::string testCommand = "where " + command + " >nul 2>&1";
-  int result = system (testCommand.c_str());
-  return result == 0;
+  std::string result;
+  std::thread reader ([&hReadPipe, &result]
+  {
+    char buffer[4096];
+    DWORD bytesRead = 0;
+    while (ReadFile (hReadPipe, buffer, sizeof (buffer) - 1, &bytesRead, NULL) && bytesRead > 0)
+      {
+	buffer[bytesRead] = '\0';
+	result += buffer;
+      }
+  });
+
+  bool timedOut = (WaitForSingleObject (pi.hProcess, timeoutMs) == WAIT_TIMEOUT);
+  if (timedOut)
+    {
+      TerminateProcess (pi.hProcess, 1);
+    }
+
+  reader.join();
+
+  CloseHandle (pi.hProcess);
+  CloseHandle (pi.hThread);
+  CloseHandle (hReadPipe);
+  return timedOut ? std::string() : result;
 }
 
 bool SystemUtil::GetRegistryValueString (const HKEY rootKey, const std::string &keyPath, const std::string &valueName,
@@ -391,21 +321,6 @@ bool SystemUtil::GetRegistryValueString (const HKEY rootKey, const std::string &
   return true;
 }
 
-bool SystemUtil::GetRegistryValueDWORD (const HKEY rootKey, const std::string &keyPath, const std::string &valueName,
-					DWORD &outValue)
-{
-  HKEY hKey;
-  if (RegOpenKeyExA (rootKey, keyPath.c_str(), 0, KEY_READ, &hKey) != ERROR_SUCCESS)
-    {
-      return false;
-    }
-  DWORD valueSize = sizeof (outValue);
-  DWORD valueType = REG_DWORD;
-  LONG result = RegQueryValueExA (hKey, valueName.c_str(), NULL, &valueType, (LPBYTE)&outValue, &valueSize);
-  RegCloseKey (hKey);
-  return result == ERROR_SUCCESS;
-}
-
 bool SystemUtil::CheckRegistryValueExists (const HKEY rootKey, const std::string &keyPath,
     const std::string &valueName)
 {
@@ -436,37 +351,13 @@ bool SystemUtil::SetRegistryValueString (const HKEY rootKey, const std::string &
     const std::string &valueName, const std::string &value)
 {
   HKEY hKey;
-  LONG result = RegOpenKeyExA (rootKey, keyPath.c_str(), 0, KEY_WRITE, &hKey);
-
-  if (result != ERROR_SUCCESS)
+  if (!OpenOrCreateKeyWrite (rootKey, keyPath, hKey))
     {
-      result = RegCreateKeyExA (
-		       rootKey,
-		       keyPath.c_str(),
-		       0,
-		       NULL,
-		       REG_OPTION_NON_VOLATILE,
-		       KEY_WRITE,
-		       NULL,
-		       &hKey,
-		       NULL
-	       );
-
-      if (result != ERROR_SUCCESS)
-	{
-	  return false;
-	}
+      return false;
     }
 
-  result = RegSetValueExA (
-		   hKey,
-		   valueName.c_str(),
-		   0,
-		   REG_SZ,
-		   (const BYTE *)value.c_str(),
-		   (DWORD) (value.length() + 1)
-	   );
-
+  LONG result = RegSetValueExA (hKey, valueName.c_str(), 0, REG_SZ,
+				(const BYTE *)value.c_str(), (DWORD) (value.length() + 1));
   RegCloseKey (hKey);
   return result == ERROR_SUCCESS;
 }
@@ -491,84 +382,41 @@ bool SystemUtil::SetRegistryValueDWORD (const HKEY rootKey, const std::string &k
 					const std::string &valueName, DWORD value)
 {
   HKEY hKey;
-  LONG result = RegOpenKeyExA (rootKey, keyPath.c_str(), 0, KEY_WRITE, &hKey);
-
-  if (result != ERROR_SUCCESS)
+  if (!OpenOrCreateKeyWrite (rootKey, keyPath, hKey))
     {
-      result = RegCreateKeyExA (
-		       rootKey,
-		       keyPath.c_str(),
-		       0,
-		       NULL,
-		       REG_OPTION_NON_VOLATILE,
-		       KEY_WRITE,
-		       NULL,
-		       &hKey,
-		       NULL
-	       );
-
-      if (result != ERROR_SUCCESS)
-	{
-	  return false;
-	}
+      return false;
     }
 
-  result = RegSetValueExA (
-		   hKey,
-		   valueName.c_str(),
-		   0,
-		   REG_DWORD,
-		   (const BYTE *)&value,
-		   sizeof (DWORD)
-	   );
-
+  LONG result = RegSetValueExA (hKey, valueName.c_str(), 0, REG_DWORD,
+				(const BYTE *)&value, sizeof (DWORD));
   RegCloseKey (hKey);
   return result == ERROR_SUCCESS;
 }
 
-bool SystemUtil::SetRegistryValueBoolean (const HKEY rootKey, const std::string &keyPath,
-    const std::string &valueName, bool value)
-{
-  DWORD dwValue = value ? 1 : 0;
-  return SetRegistryValueDWORD (rootKey, keyPath, valueName, dwValue);
-}
-
 bool SystemUtil::SetMsiProperty (MSIHANDLE hInstall, const std::string &propertyName, const std::string &value)
 {
-  int wLen = MultiByteToWideChar (CP_UTF8, 0, propertyName.c_str(), -1, NULL, 0);
-  std::vector<wchar_t> wPropertyName (wLen);
-  MultiByteToWideChar (CP_UTF8, 0, propertyName.c_str(), -1, wPropertyName.data(), wLen);
-
-  wLen = MultiByteToWideChar (CP_UTF8, 0, value.c_str(), -1, NULL, 0);
-  std::vector<wchar_t> wValue (wLen);
-  MultiByteToWideChar (CP_UTF8, 0, value.c_str(), -1, wValue.data(), wLen);
-
-  UINT result = MsiSetPropertyW (hInstall, wPropertyName.data(), wValue.data());
+  std::wstring wPropertyName = Utf8ToWide (propertyName);
+  std::wstring wValue = Utf8ToWide (value);
+  UINT result = MsiSetPropertyW (hInstall, wPropertyName.c_str(), wValue.c_str());
   return (result == ERROR_SUCCESS);
 }
 
 std::string SystemUtil::GetMsiProperty (MSIHANDLE hInstall, const std::string &propertyName)
 {
-  int wLen = MultiByteToWideChar (CP_UTF8, 0, propertyName.c_str(), -1, NULL, 0);
-  std::vector<wchar_t> wPropertyName (wLen);
-  MultiByteToWideChar (CP_UTF8, 0, propertyName.c_str(), -1, wPropertyName.data(), wLen);
+  std::wstring wPropertyName = Utf8ToWide (propertyName);
 
   DWORD bufSize = 0;
-  UINT result = MsiGetPropertyW (hInstall, wPropertyName.data(), L"", &bufSize);
+  UINT result = MsiGetPropertyW (hInstall, wPropertyName.c_str(), L"", &bufSize);
 
   if (result == ERROR_MORE_DATA || result == ERROR_SUCCESS)
     {
       bufSize++;
       std::vector<wchar_t> buffer (bufSize);
-      result = MsiGetPropertyW (hInstall, wPropertyName.data(), buffer.data(), &bufSize);
+      result = MsiGetPropertyW (hInstall, wPropertyName.c_str(), buffer.data(), &bufSize);
 
       if (result == ERROR_SUCCESS)
 	{
-	  std::wstring wValue (buffer.data());
-	  int nLen = WideCharToMultiByte (CP_UTF8, 0, wValue.c_str(), -1, NULL, 0, NULL, NULL);
-	  std::vector<char> nBuffer (nLen);
-	  WideCharToMultiByte (CP_UTF8, 0, wValue.c_str(), -1, nBuffer.data(), nLen, NULL, NULL);
-	  return std::string (nBuffer.data());
+	  return WideToUtf8 (std::wstring (buffer.data()));
 	}
     }
 

@@ -28,9 +28,13 @@ $rtf = New-Object System.Text.StringBuilder
 # Color table
 [void]$rtf.Append("{\colortbl ;\red0\green0\blue0;}")
 
-# Document formatting: viewkind4, paragraph spacing, line spacing
+# Document formatting: viewkind4, no paragraph space-after, single line spacing.
+# Every source line becomes its own \par, so \sa0 + single spacing makes the RTF
+# mirror the plain-text layout (blank lines in license.txt provide the paragraph
+# gaps). Using \sa200 / \sl276 here stacks an extra 10pt + 1.15x on every line
+# and makes the License control look almost double-spaced.
 [void]$rtf.Append("\viewkind4\uc1")
-[void]$rtf.Append("\pard\sa200\sl276\slmult1")
+[void]$rtf.Append("\pard\sa0\sl240\slmult1")
 [void]$rtf.Append("\f0\fs20\lang1033 ")
 
 # Escape RTF special characters

@@ -304,8 +304,16 @@ extern "C" {
 	return ERROR_INSTALL_FAILURE;
       }
 
-    logger.LogInfo ("Uninstalling WSL distro: " + wslName);
-    installer.UninstallWsl (wslName);
+    bool isRollback = installOptions.isRollback;
+    if (isRollback && !CUBRIDInstaller::WasImportSucceeded (wslName))
+      {
+	logger.LogInfo ("Rollback: WSL import did not succeed this session; skipping unregister for: " + wslName);
+      }
+    else
+      {
+	logger.LogInfo ("Uninstalling WSL distro: " + wslName);
+	installer.UninstallWsl (wslName);
+      }
 
     if (SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, installOptions.registryKeyPath, REGISTRY_VALUE_NAME_INSTALL_DIR, regValue))
       {
@@ -611,19 +619,10 @@ extern "C" {
     return ERROR_SUCCESS;
   }
 
-  __declspec (dllexport) UINT __stdcall CreateDemodb (MSIHANDLE hInstall)
+}
+
+static std::string PrepareDemodbScript()
   {
-    SetupMsiContext (hInstall);
-    logger.LogInfo ("Starting Demo Database creation (Async)...");
-
-    std::string wslName = "";
-    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_WSL_NAME, wslName))
-      {
-	logger.LogError ("Failed to get WSL name from registry");
-	return ERROR_SUCCESS;
-      }
-    logger.LogInfo ("WSL Name: " + wslName);
-
     std::string scriptContent =
 	    "#!/bin/bash\n"
 	    ". ~/.cubrid.sh\n"
@@ -659,15 +658,62 @@ extern "C" {
     if (!scriptFile.is_open())
       {
 	logger.LogError ("Failed to create temporary script file: " + scriptPath);
-	return ERROR_SUCCESS;
+	return "";
       }
     scriptFile.write (scriptContent.c_str(), scriptContent.size());
     scriptFile.close();
 
     logger.LogInfo ("Created temporary script: " + scriptPath);
+    return scriptPath;
+  }
+
+extern "C" {
+
+  __declspec (dllexport) UINT __stdcall CreateDemodb (MSIHANDLE hInstall)
+  {
+    SetupMsiContext (hInstall);
+    logger.LogInfo ("Starting Demo Database creation (Async)...");
+
+    std::string wslName = "";
+    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_WSL_NAME, wslName))
+      {
+	logger.LogError ("Failed to get WSL name from registry");
+	return ERROR_SUCCESS;
+      }
+    logger.LogInfo ("WSL Name: " + wslName);
+
+    std::string scriptPath = PrepareDemodbScript();
+    if (scriptPath.empty())
+      {
+	return ERROR_SUCCESS;
+      }
 
     std::thread t (CUBRIDInstaller::CreateDemodbWorker, wslName, scriptPath);
     t.detach();
+
+    return ERROR_SUCCESS;
+  }
+
+  __declspec (dllexport) UINT __stdcall CreateDemodbSync (MSIHANDLE hInstall)
+  {
+    SetupMsiContext (hInstall);
+    logger.LogInfo ("Starting Demo Database creation (Sync)...");
+
+    std::string wslName = "";
+    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_WSL_NAME, wslName))
+      {
+	logger.LogError ("Failed to get WSL name from registry");
+	return ERROR_SUCCESS;
+      }
+    logger.LogInfo ("WSL Name: " + wslName);
+
+    std::string scriptPath = PrepareDemodbScript();
+    if (scriptPath.empty())
+      {
+	return ERROR_SUCCESS;
+      }
+
+    CUBRIDInstaller::CreateDemodbWorker (wslName, scriptPath);
 
     return ERROR_SUCCESS;
   }

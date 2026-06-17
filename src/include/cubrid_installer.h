@@ -20,6 +20,7 @@ struct InstallOptions
   bool virtMachinePlatformEnabled = false;
   bool windowsSubsystemLinuxEnabled = false;
   bool isWSL2Mode = true;
+  bool isRollback = false;
   std::string registryKeyPath;
 };
 
@@ -52,6 +53,10 @@ class CUBRIDInstaller
 
     static bool ParseInstallOptions (const std::string &installOptions, InstallOptions &outOptions);
     static void CreateDemodbWorker (std::string wslName, std::string scriptPath);
+
+    static void ClearImportMarker (const std::string &wslName);
+    static void MarkImportSucceeded (const std::string &wslName);
+    static bool WasImportSucceeded (const std::string &wslName);
 
   private:
     bool ExtractCubridImage (const std::string &imageFile, const std::string &targetPath);

@@ -11,18 +11,6 @@
             DisableModify="yes"
             DisableRemove="no">
 
-        <!-- <util:RegistrySearch Id="CheckRegInstalled" 
-                             Root="HKCU" 
-                             Key="Software\CUBRID\CUBRID-FOR-WSL" 
-                             Value="installed" 
-                             Result="exists" 
-                             Variable="IsInstalledReg" 
-                             Win64="yes" />
-
-        <bal:Condition Message="#(loc.FailureAlreadyInstalled)">
-            NOT IsInstalledReg OR WixBundleInstalled
-        </bal:Condition> -->
-
         <util:ProductSearch Id="CheckMsiInstalled" 
                     ProductCode="{279d7d8d-d2b2-4644-b02c-e9e3ca8dd8bc}" 
                     Result="version" 
@@ -46,16 +34,29 @@
         
         <WixVariable Id="WixStdBALanguageId" Value="0" Overridable="yes" />
 
+        <Variable Name="REG_TRAY_APP"         Type="numeric" Value="1" bal:Overridable="yes" />
+        <Variable Name="CREATE_SHORTCUT"      Type="numeric" Value="1" bal:Overridable="yes" />
+        <Variable Name="CREATE_DEMODB"        Type="numeric" Value="1" bal:Overridable="yes" />
+        <Variable Name="IS_WSL2_MODE"         Type="numeric" Value="1" bal:Overridable="yes" />
+        <Variable Name="START_TRAY_APP"       Type="numeric" Value="1" bal:Overridable="yes" />
+        <Variable Name="CUB_DEFAULT_WSL_NAME" Type="string"  Value="CUBRID-FOR-WSL" bal:Overridable="yes" />
+
           <Chain>
-            <MsiPackage SourceFile="CUBRID_Base.msi"
-                        DisplayInternalUI="yes" 
-                        Visible="yes" 
+            <MsiPackage Id="CubridPackage" SourceFile="CUBRID_Base.msi"
+                        DisplayInternalUI="yes"
+                        Visible="yes"
                         ForcePerMachine="yes"
                         Permanent="no"
                         Vital="yes">
-                <MsiProperty Name="TRANSFORMS" Value=":[SystemLanguageID]" />
+                <MsiProperty Name="TRANSFORMS" Value=":[WixStdBALanguageId]" />
                 <MsiProperty Name="BUNDLEPROVIDERKEY" Value="[WixBundleProviderKey]" />
                 <MsiProperty Name="ARPSYSTEMCOMPONENT" Value="1" />
+                <MsiProperty Name="REG_TRAY_APP" Value="[REG_TRAY_APP]" />
+                <MsiProperty Name="CREATE_SHORTCUT" Value="[CREATE_SHORTCUT]" />
+                <MsiProperty Name="CREATE_DEMODB" Value="[CREATE_DEMODB]" />
+                <MsiProperty Name="IS_WSL2_MODE" Value="[IS_WSL2_MODE]" />
+                <MsiProperty Name="START_TRAY_APP" Value="[START_TRAY_APP]" />
+                <MsiProperty Name="CUB_DEFAULT_WSL_NAME" Value="[CUB_DEFAULT_WSL_NAME]" />
             </MsiPackage>
         </Chain>
     </Bundle>

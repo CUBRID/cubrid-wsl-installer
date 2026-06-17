@@ -112,6 +112,13 @@ int RunPowerShellScript (const std::string &tag, const std::string &scriptBody,
 
   return (int) exitCode;
 }
+
+std::string GetImportMarkerPath (const std::string &wslName)
+{
+  const char *tempEnv = std::getenv ("TEMP");
+  const std::string tempDir = tempEnv ? tempEnv : ".";
+  return tempDir + "\\cubrid_wsl_import_" + wslName + ".marker";
+}
 } // namespace
 
 CUBRIDInstaller::CUBRIDInstaller()
@@ -259,7 +266,7 @@ bool CUBRIDInstaller::SetupWslDistro (const InstallOptions &options)
       body += "Write-Host 'Setting Default WSL Version to 1...'; ";
       body += "wsl --set-default-version 1; ";
     }
-  body += "Write-Host 'Importing CUBRID WSL Distro...'; ";
+  body += "Write-Host 'Importing CUBRID WSL Distro (" + options.wslName + ")...'; ";
   body += "wsl --import " + options.wslName + " '" + cleanInstallPath + "' '" + imagePath.string() + "'; ";
   body += "if ($?) { Write-Host 'WSL Import Successful.' } else { Write-Host 'WSL Import Failed. '; Start-Sleep -Seconds 5; exit 1 }; ";
   body += "Start-Sleep -Seconds 5; ";
@@ -274,16 +281,36 @@ bool CUBRIDInstaller::UninstallWsl (const std::string &wslName)
   logger.LogInfo ("Uninstalling WSL Distro: " + wslName);
 
   std::string body;
-  body += "Write-Host 'Unregistering WSL Distro...'; ";
+  body += "Write-Host 'Unregistering WSL Distro (" + wslName + ")...'; ";
   body += "wsl --unregister " + wslName + "; Start-Sleep -Seconds 7; ";
 
   RunPowerShellScript ("uninstall", body, 0, "SilentlyContinue", true);
   return true;
 }
 
+void CUBRIDInstaller::ClearImportMarker (const std::string &wslName)
+{
+  std::error_code ec;
+  std::filesystem::remove (GetImportMarkerPath (wslName), ec);
+}
+
+void CUBRIDInstaller::MarkImportSucceeded (const std::string &wslName)
+{
+  std::ofstream marker (GetImportMarkerPath (wslName));
+  marker << "1";
+}
+
+bool CUBRIDInstaller::WasImportSucceeded (const std::string &wslName)
+{
+  std::error_code ec;
+  return std::filesystem::exists (GetImportMarkerPath (wslName), ec);
+}
+
 bool CUBRIDInstaller::InstallWslAndCubrid (const InstallOptions &options)
 {
   logger.LogInfo ("InstallWslAndCubrid...");
+
+  ClearImportMarker (options.wslName);
 
   std::filesystem::path installDir (options.installPath);
   std::filesystem::path vhdxPath = installDir / "ext4.vhdx";
@@ -316,6 +343,8 @@ bool CUBRIDInstaller::InstallWslAndCubrid (const InstallOptions &options)
       CleanUpFile (options.installPath + "\\" + CUB_WSL_EXTRACT_IMAGE_FILE);
       return false;
     }
+
+  MarkImportSucceeded (options.wslName);
 
   logger.LogInfo ("Cleaning up extracted image file : " + options.installPath + "\\" + CUB_WSL_EXTRACT_IMAGE_FILE);
   logger.LogInfo ("Cleaning up extracted image file : " + options.cubridImageFile);
@@ -502,6 +531,10 @@ bool CUBRIDInstaller::ParseInstallOptions (const std::string &installOptions, In
 	  else if (key == "IS_WSL2_MODE")
 	    {
 	      outOptions.isWSL2Mode = ( value == "1" );
+	    }
+	  else if (key == "IS_ROLLBACK")
+	    {
+	      outOptions.isRollback = ( value == "1" );
 	    }
 	}
     }

@@ -364,16 +364,14 @@ void TrayApp::ShowAboutDialog()
       break;
     }
 
-  std::string message = std::string (TRAY_APP_TITLE) + "\n\n";
-  message += "----------------------------------------------------------\n";
+  std::string message = std::string (TRAY_APP_TITLE) + "\n\n\n";
   message += "Server Version: " + version + "\n";
   message += "\n";
   message += "Server Status: " + status + "\n";
   message += "\n";
   message += "WSL Name: " + wslName + "\n";
   message += "\n";
-  message += "Install Directory: " + installDir + "\n";
-  message += "----------------------------------------------------------\n\n";
+  message += "Install Directory: " + installDir + "\n\n\n";
   message += "Version: " CUBRID_WSL_VERSION;
 
 

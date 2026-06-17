@@ -41,15 +41,6 @@ std::string EnvironmentUtil::GetMsiProperty (MSIHANDLE hInstall, const std::stri
   return SystemUtil::GetMsiProperty (hInstall, propertyName);
 }
 
-bool EnvironmentUtil::CheckWindowsFeature (const std::string &featureName)
-{
-  std::string command = "powershell -Command \"Get-WindowsOptionalFeature -Online -FeatureName " + featureName +
-			" | Select-Object -ExpandProperty State\"";
-  std::string result = SystemUtil::ExecutePowerShellCommand (command);
-
-  return result.find ("Enabled") != std::string::npos;
-}
-
 bool EnvironmentUtil::CheckWSLInstalled()
 {
   LPCSTR registryKeyPath = "Software\\Microsoft\\Windows\\CurrentVersion\\Lxss\\MSI";

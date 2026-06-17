@@ -87,10 +87,6 @@ if not "%IMAGE_COPY_OPTION%"=="0" if not "%IMAGE_COPY_OPTION%"=="1" (
 
 set COPY_IMAGE_TAR_GZ_FILE=cubrid-wsl2-%CUBRID_VERSION%.tar.gz
 
-echo [BUILD INFO] Build Type     : %BUILD_TYPE%
-echo [BUILD INFO] CUBRID Version : %CUBRID_VERSION%
-echo.
-
 echo [INFO] Checking CMake...
 "%CMAKE_PATH%" --version >nul 2>&1
 if %errorLevel% neq 0 (
@@ -110,6 +106,11 @@ if EXIST "%SHELL_DIR%\.git" (
   set EXTRA_VERSION=0000
 )
 
+echo [BUILD INFO] Build Type     : %BUILD_TYPE%
+echo [BUILD INFO] CUBRID Version : %CUBRID_VERSION%
+echo [BUILD INFO] WSL Version : v%VERSION%-%EXTRA_VERSION%
+echo.
+
 set INSTALL_FILE_NAME=CUBRID-%CUBRID_VERSION%-For-WSL-%VERSION%-%EXTRA_VERSION%-win64.exe
 set MSI_FILE_NAME=CUBRID-%CUBRID_VERSION%-For-WSL-%VERSION%-%EXTRA_VERSION%-win64.msi
 
@@ -119,7 +120,7 @@ if "%BUILD_TYPE%"=="3" (
 ) else if "%BUILD_TYPE%"== "2" (
     set IMAGE_COPY_OPTION 0
 )
-echo [INFO] Image Copy     : %IMAGE_COPY_OPTION%
+echo [INFO] Image Copy : %IMAGE_COPY_OPTION%
 
 if exist "%BUILD_DIR%" (
     rmdir /s /q "%BUILD_DIR%"
@@ -225,38 +226,16 @@ echo [INFO] Building Target MSI (ko-kr) for transform...
   %BUILD_DIR%\wix\cubrid_wsl.wixobj %BUILD_DIR%\wix\cubrid_wsl_ui.wixobj
 if %errorlevel% neq 0 goto :FAIL
 
-echo [INFO] Generating Transform (ko-kr.mst)...
-"!TORCH_PATH!" -p -t language CUBRID_Base.msi CUBRID_Ko.msi -out ko-kr.mst
+echo [INFO] Building multi-language MSI (1033=en-us, 1042=ko-kr)...
+cscript //nologo "%SHELL_DIR%\wix_src\embed_transforms.vbs" CUBRID_Base.msi CUBRID_Ko.msi "!TORCH_PATH!"
 if %errorlevel% neq 0 (
-    echo [ERROR] Torch failed. Check if torch.exe is in "!TORCH_PATH!"
-    goto :FAIL
-)
-
-echo [INFO] Embedding Transform into Base MSI...
-echo Dim installer, database, view, record > embed.vbs
-echo Set installer = CreateObject("WindowsInstaller.Installer") >> embed.vbs
-echo Set database = installer.OpenDatabase("CUBRID_Base.msi", 1) >> embed.vbs
-echo Set view = database.OpenView("INSERT INTO `_Storages` (`Name`, `Data`) VALUES ('1042', ?)") >> embed.vbs
-echo Set record = installer.CreateRecord(1) >> embed.vbs
-echo record.SetStream 1, "ko-kr.mst" >> embed.vbs
-echo view.Execute record >> embed.vbs
-echo database.Commit >> embed.vbs
-echo Set sumInfo = database.SummaryInformation(1) >> embed.vbs
-echo sumInfo.Property(7) = "1033,1042" >> embed.vbs
-echo sumInfo.Persist >> embed.vbs
-echo Set view = Nothing >> embed.vbs
-echo Set database = Nothing >> embed.vbs
-
-cscript //nologo embed.vbs
-if %errorlevel% neq 0 (
-    echo [ERROR] Failed to embed transform.
-    del embed.vbs
+    echo [ERROR] Failed to build multi-language MSI.
     goto :FAIL
 )
 
 echo [INFO] Finalizing Multi-language MSI...
 copy /Y CUBRID_Base.msi %MSI_FILE_NAME%
-del CUBRID_Ko.msi ko-kr.mst embed.vbs wix\cubrid_base.pdb wix\cubrid_ko.pdb
+del CUBRID_Ko.msi wix\cubrid_base.pdb wix\cubrid_ko.pdb
 
 echo [INFO] Multi-language MSI build complete.
 
