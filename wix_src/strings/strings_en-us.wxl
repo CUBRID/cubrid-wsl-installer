@@ -53,7 +53,7 @@
     <String Id="CUBRID_CustomCancelDlg_Description">Are you sure you want to cancel the installation?</String>
 
     <String Id="CUBRID_CustomValidWslDlg_Title">Invalid WSL Name</String>
-    <String Id="CUBRID_CustomValidWslDlg_Description">The WSL name is not valid.&#13;&#10;&#13;&#10;It is also used as the installation folder name, so it may contain only letters, digits, periods (.), underscores (_), and hyphens (-). Spaces and characters such as \ / : * ? " &lt; &gt; | are not allowed. It cannot be a reserved name (e.g. CON, NUL) or end with a dot.&#13;&#10;&#13;&#10;Please enter a valid name and try again.</String>
+    <String Id="CUBRID_CustomValidWslDlg_Description">The WSL name is not valid.&#13;&#10;The WSL name or installation path contains unauthorized special characters or spaces.&#13;&#10;Please check the string and try again.</String>
 
     <String Id="CUBRID_Check_Virt_Title">Virtualization Technology Disabled</String>
     <String Id="CUBRID_Check_Virt_Description">[CPU_BRAND] Virtualization technology is disabled in BIOS.&#13;&#10;&#13;&#10;Update your system or change BIOS settings and Run the installer again.</String>
@@ -70,7 +70,9 @@
     <String Id="CUBRID_Check_WSLRebootRequired_Title">Reboot Required For WSL</String>
     <String Id="CUBRID_Check_WSLRebootRequired_Description">(Warning) &#13;&#10;WSL required packages are installed but packages that require a reboot are exist.&#13;&#10;&#13;&#10;It is recommended to run the installer again after rebooting. &#13;&#10;Run the installer again after rebooting if installation fails.</String>
 
-    <String Id="CUBRID_FatalErrorDescription1"> An error occurred and [ProductName] installation failed.&#13;&#10; A reboot may be required after enabling WSL features.&#13;&#10;Please run the installer wizard again after rebooting.&#13;&#10;</String>
+    <String Id="CUBRID_FatalErrorDescription1"> 1. A reboot may be required if a problem occurs after enabling WSL features.&#13;&#10; 2. Virtual Machine Platform and similar are built-in Windows features, and their activation is performed by Windows, so please check the Windows state.&#13;&#10; 3. If Intel VT or AMD-V is disabled in the BIOS, enable it and run the installer again.&#13;&#10; 4. If the installation keeps stopping even after checking, you can uncheck the WSL2 mode option in the installation options and install in WSL1 mode instead. This option can be selected in the installation options.&#13;&#10;</String>
+
+    <String Id="CUBRID_Error_Invalid_Wsl_Name">Installation cannot continue: the WSL name "[CUB_DEFAULT_WSL_NAME]" is not valid. It is also used as the installation folder name, so it may contain only letters, digits, periods (.), underscores (_), and hyphens (-). Spaces and characters such as \ / : * ? " &lt; &gt; | are not allowed, and it cannot be a reserved name (e.g. CON, NUL) or end with a dot.</String>
 
     <String Id="CUBRID_Error_Feature_Timeout_Description">Enabling Windows built-in features timed out.&#13;&#10;This operation uses the following commands:&#13;&#10;1) dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart;&#13;&#10;2) dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart;&#13;&#10;If it keeps timing out, enable these features manually, reboot, and run the installer again.&#13;&#10;If they still cannot be enabled, uncheck "Install in WSL2 mode" in the installation options and install in WSL1 mode instead.</String>
 

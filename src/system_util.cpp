@@ -4,6 +4,7 @@
 #include <vector>
 #include <chrono>
 #include <thread>
+#include <memory>
 #include <filesystem>
 
 #include "system_util.h"
@@ -15,6 +16,12 @@ namespace
   {
     DWORD targetPid;
     HWND  found;
+  };
+
+  struct PipeReaderState
+  {
+    HANDLE      hReadPipe = INVALID_HANDLE_VALUE;
+    std::string result;
   };
 
   static BOOL CALLBACK EnumConsoleProc (HWND hwnd, LPARAM lp)
@@ -231,6 +238,15 @@ std::string SystemUtil::ExecuteCommandWithTimeout (const std::string &command, D
 
   SetHandleInformation (hReadPipe, HANDLE_FLAG_INHERIT, 0);
 
+  HANDLE hJob = CreateJobObjectA (NULL, NULL);
+  if (hJob)
+    {
+      JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli;
+      ZeroMemory (&jeli, sizeof (jeli));
+      jeli.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+      SetInformationJobObject (hJob, JobObjectExtendedLimitInformation, &jeli, sizeof (jeli));
+    }
+
   STARTUPINFOA si;
   PROCESS_INFORMATION pi;
   ZeroMemory (&si, sizeof (si));
@@ -243,39 +259,68 @@ std::string SystemUtil::ExecuteCommandWithTimeout (const std::string &command, D
   ZeroMemory (&pi, sizeof (pi));
 
   if (!CreateProcessA (NULL, (LPSTR)command.c_str(), NULL, NULL, TRUE,
-		       CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+		       CREATE_NO_WINDOW | CREATE_SUSPENDED, NULL, NULL, &si, &pi))
     {
+      if (hJob) {
+	CloseHandle (hJob);
+      }
       CloseHandle (hReadPipe);
       CloseHandle (hWritePipe);
       return "";
     }
 
+  if (hJob)
+    {
+      AssignProcessToJobObject (hJob, pi.hProcess);
+    }
+  ResumeThread (pi.hThread);
+
   CloseHandle (hWritePipe);
 
-  std::string result;
-  std::thread reader ([&hReadPipe, &result]
+  auto state = std::make_shared<PipeReaderState>();
+  state->hReadPipe = hReadPipe;
+  std::thread reader ([state]
   {
     char buffer[4096];
     DWORD bytesRead = 0;
-    while (ReadFile (hReadPipe, buffer, sizeof (buffer) - 1, &bytesRead, NULL) && bytesRead > 0)
+    while (ReadFile (state->hReadPipe, buffer, sizeof (buffer) - 1, &bytesRead, NULL) && bytesRead > 0)
       {
-	buffer[bytesRead] = '\0';
-	result += buffer;
+	state->result.append (buffer, bytesRead);
       }
+    CloseHandle (state->hReadPipe);
+    state->hReadPipe = INVALID_HANDLE_VALUE;
   });
 
   bool timedOut = (WaitForSingleObject (pi.hProcess, timeoutMs) == WAIT_TIMEOUT);
   if (timedOut)
     {
+      if (hJob) {
+	TerminateJobObject (hJob, 1);
+      }
       TerminateProcess (pi.hProcess, 1);
     }
 
-  reader.join();
+  std::string output;
+  const DWORD readerGraceMs = 3000;
+  if (WaitForSingleObject ((HANDLE) reader.native_handle(), readerGraceMs) == WAIT_OBJECT_0)
+    {
+      reader.join();
+      output = std::move (state->result);
+    }
+  else
+    {
+      reader.detach();
+      timedOut = true;
+    }
 
   CloseHandle (pi.hProcess);
   CloseHandle (pi.hThread);
-  CloseHandle (hReadPipe);
-  return timedOut ? std::string() : result;
+  if (hJob)
+    {
+      CloseHandle (hJob);
+    }
+
+  return timedOut ? std::string() : output;
 }
 
 bool SystemUtil::GetRegistryValueString (const HKEY rootKey, const std::string &keyPath, const std::string &valueName,

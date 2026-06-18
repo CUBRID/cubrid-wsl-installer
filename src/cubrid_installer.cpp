@@ -26,8 +26,9 @@ const std::string CUBRIDInstaller::BUNDLE_INSTALL_REG_KEY_PATH =
 	"SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall";
 static Logger &logger = Logger::GetInstance();
 
-static constexpr DWORD ENABLE_FEATURES_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
-static constexpr DWORD CREATE_DEMODB_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+static constexpr DWORD ENABLE_FEATURES_TIMEOUT_MS = 3 * 60 * 1000;
+static constexpr DWORD CREATE_DEMODB_TIMEOUT_MS = 5 * 60 * 1000;
+static constexpr DWORD INSTALL_UNINSTALL_TIMEOUT_MS = 10 * 60 * 1000;
 static const char *STARTUP_RUN_VALUE_NAME = "CUBRID_WSL_TrayApp";
 
 namespace
@@ -228,7 +229,7 @@ int CUBRIDInstaller::EnableWindowsFeatures (MSIHANDLE hInstall, const InstallOpt
     }
   body += "Start-Sleep -Seconds 3; ";
 
-  int rc = RunPowerShellScript ("features", body, 1000, "Stop", true);
+  int rc = RunPowerShellScript ("features", body, ENABLE_FEATURES_TIMEOUT_MS, "Stop", true);
   if (rc == RPS_TIMEOUT)
     {
       return TIMEOUT;
@@ -271,8 +272,8 @@ bool CUBRIDInstaller::SetupWslDistro (const InstallOptions &options)
   body += "if ($?) { Write-Host 'WSL Import Successful.' } else { Write-Host 'WSL Import Failed. '; Start-Sleep -Seconds 5; exit 1 }; ";
   body += "Start-Sleep -Seconds 5; ";
 
-  int rc = RunPowerShellScript ("import", body, 0, "Stop", true);
-  return rc == 0;
+  int rc = RunPowerShellScript ("import", body, INSTALL_UNINSTALL_TIMEOUT_MS, "Stop", true);
+  return rc == 0 ? true : false;
 }
 
 bool CUBRIDInstaller::UninstallWsl (const std::string &wslName)
@@ -283,8 +284,8 @@ bool CUBRIDInstaller::UninstallWsl (const std::string &wslName)
   body += "Write-Host 'Unregistering WSL Distro (" + wslName + ")...'; ";
   body += "wsl --unregister " + wslName + "; Start-Sleep -Seconds 7; ";
 
-  RunPowerShellScript ("uninstall", body, 0, "SilentlyContinue", true);
-  return true;
+  int rc = RunPowerShellScript ("uninstall", body, INSTALL_UNINSTALL_TIMEOUT_MS, "SilentlyContinue", true);
+  return rc == 0 ? true : false;
 }
 
 void CUBRIDInstaller::ClearImportMarker (const std::string &wslName)

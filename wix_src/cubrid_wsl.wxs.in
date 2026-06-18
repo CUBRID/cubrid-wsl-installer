@@ -117,6 +117,7 @@
         Value="CUB_VIRT_MACHINE_PLATFORM_ENABLED=[CUB_VIRT_MACHINE_PLATFORM_ENABLED];CUB_WINDOWS_SUBSYSTEM_LINUX=[CUB_WINDOWS_SUBSYSTEM_LINUX];IS_WSL2_MODE=[IS_WSL2_MODE]" />
 
     <CustomAction Id="ActionCheckWslName" BinaryKey="CubridCustomActions" DllEntry="CheckWslName" Execute="immediate" Return="ignore" />
+    <CustomAction Id="ActionInvalidWslNameError" Error="!(loc.CUBRID_Error_Invalid_Wsl_Name)" />
 
     <CustomAction Id="ActionInstallWsl" BinaryKey="CubridCustomActions" DllEntry="InstallWslAndCubrid" Execute="deferred" Impersonate="yes" Return="check" />
     <CustomAction Id="ActionSetInstallWslData" Property="ActionInstallWsl"
@@ -138,17 +139,19 @@
     <CustomAction Id="ActionUpdateInstalledSize" BinaryKey="CubridCustomActions" DllEntry="UpdateInstalledSize" Execute="deferred" Return="ignore" Impersonate="yes" />
 
     <InstallExecuteSequence>
-        <Custom Action="ActionUpdateInstallFolder" After="CostFinalize">NOT Installed AND UILevel &lt; 5</Custom>
+        <Custom Action="ActionCheckWslName" After="CostFinalize">NOT Installed</Custom>
+        <Custom Action="ActionInvalidWslNameError" After="ActionCheckWslName">NOT Installed AND CUB_WSL_NAME_VALID &lt;&gt; "1"</Custom>
+        <Custom Action="ActionUpdateInstallFolder" After="ActionInvalidWslNameError">NOT Installed AND UILevel &lt; 5</Custom>
         <Custom Action="ActionSetInstallFeaturesData" Before="ActionInstallFeatures">NOT Installed</Custom>
         <Custom Action="ActionInstallFeatures" Before="ActionSetRollbackWslData">NOT Installed</Custom>
         <Custom Action="ActionSetRollbackWslData" Before="ActionRollbackWsl">NOT Installed</Custom>
         <Custom Action="ActionRollbackWsl" Before="ActionSetInstallWslData">NOT Installed</Custom>
         <Custom Action="ActionSetInstallWslData" Before="ActionInstallWsl">NOT Installed</Custom>
-        <Custom Action="ActionInstallWsl" Before="ActionRegisterTrayApp">NOT Installed</Custom>
+        <Custom Action="ActionInstallWsl" Before="ActionCreateDemodb">NOT Installed</Custom>
 
+        <Custom Action="ActionCreateDemodb" Before="ActionRegisterTrayApp">NOT Installed AND CREATE_DEMODB="1"</Custom>
         <Custom Action="ActionRegisterTrayApp" Before="ActionCreateShortcut">NOT Installed AND REG_TRAY_APP="1"</Custom>
-        <Custom Action="ActionCreateShortcut" Before="ActionCreateDemodb">NOT Installed AND CREATE_SHORTCUT="1"</Custom>
-        <Custom Action="ActionCreateDemodb" Before="ActionStartCubridService">NOT Installed AND CREATE_DEMODB="1"</Custom>
+        <Custom Action="ActionCreateShortcut" Before="ActionStartCubridService">NOT Installed AND CREATE_SHORTCUT="1"</Custom>
         <Custom Action="ActionStartCubridService" Before="ActionLaunchTrayApp">NOT Installed</Custom>
         <Custom Action="ActionLaunchTrayApp" Before="ActionUpdateInstalledSize">NOT Installed AND START_TRAY_APP="1"</Custom>
         <Custom Action="ActionUpdateInstalledSize" Before="InstallFinalize">NOT Installed</Custom>
