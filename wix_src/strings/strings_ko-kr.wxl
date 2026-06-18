@@ -49,11 +49,11 @@
     <String Id="CUBRID_Yes">예</String>
     <String Id="CUBRID_No">아니오</String>
 
-    <String Id="CUBRID_CustomFatalErrorDlg_TimeoutTitle">{\WixUI_Font_Bigger}Windows 내장 기능 활성화 작업 시간이 초과되어 설치가 중단 되었습니다.</String>
-    <String Id="CUBRID_CustomFatalErrorDlg_TimeoutDescription"> 1. Virtual Machine Platform 등은 Windows 내장 기능이며, 그 활성화 동작은 Windows가 수행하므로 Windows 상태를 점검하세요.&#13;&#10; 2. BIOS에서 Intel VT 또는 AMD-V가 비활성화되어 있다면 활성화한 뒤 설치 프로그램을 다시 실행하세요.&#13;&#10; 3. 확인 및 BIOS 설정 후에도 설치가 계속 멈춘다면, 설치 옵션에서 WSL2 모드 옵션을 체크 해제하여 WSL1 모드로 설치할 수도 있습니다.&#13;&#10;이 옵션은 설치 옵션에서 선택할 수 있습니다.&#13;&#10;문제해결 후 설치 마법사를 다시 실행하십시오.</String>
-
     <String Id="CUBRID_CustomCancelDlg_Header">설치 취소</String>
     <String Id="CUBRID_CustomCancelDlg_Description">설치를 취소하시겠습니까?</String>
+
+    <String Id="CUBRID_CustomValidWslDlg_Title">잘못된 WSL 이름</String>
+    <String Id="CUBRID_CustomValidWslDlg_Description">WSL 배포판 이름이나 설치 경로에 허용되지 않는 특수문자 또는 공백이 포함되어 있으면 안 됩니다.&#13;&#10;문자열을 확인한 후 다시 시도해 주세요..</String>
 
     <String Id="CUBRID_Check_Virt_Title">가상화 기술 비활성화</String>
     <String Id="CUBRID_Check_Virt_Description">[CPU_BRAND] 가상화 기술이 BIOS에서 비활성화되어 있습니다. 활성화하고 설치 프로그램을 다시 실행하세요.</String>
@@ -70,7 +70,7 @@
     <String Id="CUBRID_Check_WSLRebootRequired_Title">WSL 재부팅 필요</String>
     <String Id="CUBRID_Check_WSLRebootRequired_Description">(경고) &#13;&#10;WSL 필요한 패키지가 설치되어 있지만 재부팅이 필요한 패키지가 있습니다.&#13;&#10;&#13;&#10;재부팅 후 다시 설치 프로그램을 실행하는 것을 권장합니다. &#13;&#10;설치 실패 시 재부팅 후 다시 설치 프로그램을 실행하세요.</String>
 
-    <String Id="CUBRID_FatalErrorDescription1"> 오류가 발생하여 [ProductName] 설치에 실패했습니다.&#13;&#10; WSL기능 활성화 후 재부팅이 필요 할 수 있습니다.&#13;&#10; 재부팅후에 설치 마법사를 다시 실행하십시오.&#13;&#10;</String>
+    <String Id="CUBRID_FatalErrorDescription1">1. WSL기능 활성화 후 문제가 발생한 경우 재부팅이 필요 할 수 있습니다.&#13;&#10; 2. Virtual Machine Platform 등은 Windows 내장 기능이며, 그 활성화 동작은 Windows가 수행하므로 Windows 상태를 점검하세요.&#13;&#10; 3. BIOS에서 Intel VT 또는 AMD-V가 비활성화되어 있다면 활성화한 뒤 설치 프로그램을 다시 실행하세요.&#13;&#10; 4. 확인 및 BIOS 설정 후에도 설치가 계속 멈춘다면, 설치 옵션에서 WSL2 모드 옵션을 체크 해제하여 WSL1 모드로 설치할 수도 있습니다.&#13;&#10;이 옵션은 설치 옵션에서 선택할 수 있습니다.&#13;&#10;문제해결 후 설치 마법사를 다시 실행하십시오.</String>
 
     <String Id="CUBRID_Error_Feature_Timeout_Description">Windows 내장 기능 활성화 작업 시간이 초과되었습니다.&#13;&#10;해당 작업에는 아래와 같은 명령어를 사용합니다.&#13;&#10;1) dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart;&#13;&#10;2) dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart;&#13;&#10;계속해서 타임아웃이 발생할 경우 수동으로 활성화한 뒤 재부팅하고 설치 프로그램을 다시 실행하세요.&#13;&#10;계속 활성화되지 않을 경우 설치 옵션에서 WSL2 모드를 체크 해제하여 WSL1 모드로 설치할 수도 있습니다.</String>
 

@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <thread>
 #include <fstream>
+#include <cctype>
 
 #include "cubrid_installer.h"
 #include "environment_util.h"
@@ -25,12 +26,6 @@ extern "C" {
   {
     SetupMsiContext (hInstall);
     return EnvironmentUtil::RunAllEnvironmentChecks (hInstall);
-  }
-
-  __declspec (dllexport) UINT __stdcall OpenFileDialog (MSIHANDLE hInstall)
-  {
-    SetupMsiContext (hInstall);
-    return EnvironmentUtil::OpenFileDialog (hInstall);
   }
 
   __declspec (dllexport) UINT __stdcall StartWSL (MSIHANDLE hInstall)
@@ -715,6 +710,76 @@ extern "C" {
 
     CUBRIDInstaller::CreateDemodbWorker (wslName, scriptPath);
 
+    return ERROR_SUCCESS;
+  }
+
+  __declspec (dllexport) UINT __stdcall CheckWslName (MSIHANDLE hInstall) {
+    char wslName[256] = { 0 };
+    DWORD dwBufSize = sizeof (wslName);
+
+    if (MsiGetPropertyA (hInstall, "CUB_DEFAULT_WSL_NAME", wslName, &dwBufSize) != ERROR_SUCCESS) {
+        MsiSetPropertyA (hInstall, "CUB_WSL_NAME_VALID", "0");
+        return ERROR_SUCCESS;
+    }
+
+    std::string name (wslName);
+    bool isValid = true;
+
+    // The name is concatenated UNQUOTED into elevated PowerShell command lines
+    // (wsl --import / --unregister / -d ...) AND used as a folder name in the
+    // install path ([LocalAppDataFolder][CUB_DEFAULT_WSL_NAME]). The allowlist
+    // below already excludes every Windows folder-illegal character
+    // (\ / : * ? " < > |) and whitespace, plus all shell metacharacters. On top
+    // of that we must reject names that use legal characters but are still
+    // invalid as a folder: a trailing dot and Windows reserved device names.
+    const size_t MAX_WSL_NAME_LEN = 64;
+
+    if (name.empty () || name.length () > MAX_WSL_NAME_LEN) {
+        isValid = false;
+    } else if (name[0] == '-') {
+        // A leading '-' could be parsed as an option by wsl.exe.
+        isValid = false;
+    } else if (name == "." || name == "..") {
+        // Reserved path components; would break the folder / .lnk / marker paths.
+        isValid = false;
+    } else if (name.back () == '.') {
+        // A trailing dot is stripped by Windows and cannot be created as a folder.
+        isValid = false;
+    } else {
+        for (char ch : name) {
+            bool allowed = (ch >= 'A' && ch <= 'Z')
+                           || (ch >= 'a' && ch <= 'z')
+                           || (ch >= '0' && ch <= '9')
+                           || ch == '.' || ch == '_' || ch == '-';
+            if (!allowed) {
+                isValid = false;
+                break;
+            }
+        }
+
+        if (isValid) {
+            // Reject Windows reserved device names (CON, PRN, AUX, NUL,
+            // COM1-9, LPT1-9), case-insensitively, on the base before any dot
+            // (e.g. "CON" and "CON.foo" are both reserved as folder names).
+            std::string base = name.substr (0, name.find ('.'));
+            std::string upper;
+            for (char ch : base) {
+                upper.push_back ((char) toupper ((unsigned char) ch));
+            }
+
+            bool reserved = (upper == "CON" || upper == "PRN" || upper == "AUX" || upper == "NUL");
+            if (!reserved && upper.length () == 4
+                && (upper.compare (0, 3, "COM") == 0 || upper.compare (0, 3, "LPT") == 0)
+                && upper[3] >= '1' && upper[3] <= '9') {
+                reserved = true;
+            }
+            if (reserved) {
+                isValid = false;
+            }
+        }
+    }
+
+    MsiSetPropertyA (hInstall, "CUB_WSL_NAME_VALID", isValid ? "1" : "0");
     return ERROR_SUCCESS;
   }
 }

@@ -31,7 +31,6 @@ class EnvironmentUtil
     ~EnvironmentUtil();
 
     static UINT RunAllEnvironmentChecks (MSIHANDLE hInstall);
-    static UINT OpenFileDialog (MSIHANDLE hInstall);
 
   private:
     std::string logDir;

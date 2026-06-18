@@ -110,12 +110,13 @@
     <Binary Id="CubridCustomActions" SourceFile="CubridCustomActions.dll" />
 
     <CustomAction Id="ActionEnvironmentCheck" BinaryKey="CubridCustomActions" DllEntry="RunAllEnvironmentChecks" Execute="immediate" Return="check" />
-    <CustomAction Id="ActionOpenFileDialog" BinaryKey="CubridCustomActions" DllEntry="OpenFileDialog" Execute="immediate" Return="check" />
 
     <CustomAction Id="ActionUpdateInstallFolder" Directory="INSTALLFOLDER" Value="[LocalAppDataFolder][CUB_DEFAULT_WSL_NAME]" />
     <CustomAction Id="ActionInstallFeatures" BinaryKey="CubridCustomActions" DllEntry="EnableWSLFeatures" Execute="deferred" Impersonate="no" Return="check" />
     <CustomAction Id="ActionSetInstallFeaturesData" Property="ActionInstallFeatures"
         Value="CUB_VIRT_MACHINE_PLATFORM_ENABLED=[CUB_VIRT_MACHINE_PLATFORM_ENABLED];CUB_WINDOWS_SUBSYSTEM_LINUX=[CUB_WINDOWS_SUBSYSTEM_LINUX];IS_WSL2_MODE=[IS_WSL2_MODE]" />
+
+    <CustomAction Id="ActionCheckWslName" BinaryKey="CubridCustomActions" DllEntry="CheckWslName" Execute="immediate" Return="ignore" />
 
     <CustomAction Id="ActionInstallWsl" BinaryKey="CubridCustomActions" DllEntry="InstallWslAndCubrid" Execute="deferred" Impersonate="yes" Return="check" />
     <CustomAction Id="ActionSetInstallWslData" Property="ActionInstallWsl"

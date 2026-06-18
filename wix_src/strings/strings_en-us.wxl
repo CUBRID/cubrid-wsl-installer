@@ -49,11 +49,11 @@
     <String Id="CUBRID_Yes">Yes</String>
     <String Id="CUBRID_No">No</String>
 
-    <String Id="CUBRID_CustomFatalErrorDlg_TimeoutTitle">{\WixUI_Font_Bigger}Windows built-in feature activation timed out, so installed stop.</String>
-    <String Id="CUBRID_CustomFatalErrorDlg_TimeoutDescription">Windows built-in feature activation timed out.&#13;&#10; 1. Virtual Machine Platform and similar are built-in Windows features, and their activation is performed by Windows, so please check the Windows state.&#13;&#10; 2. BIOS has Intel VT or AMD-V disabled, please enable it and run the installer again.&#13;&#10; 3. If the installation continues to stop even after checking or BIOS settings, you can also install with WSL1 mode by unchecking the WSL2 Mode option in the installation options.&#13;&#10;This option can be selected in the installation options.&#13;&#10;Please run the installation wizard again after resolving the issue.</String>
-    
     <String Id="CUBRID_CustomCancelDlg_Header">Cancel Installation</String>
     <String Id="CUBRID_CustomCancelDlg_Description">Are you sure you want to cancel the installation?</String>
+
+    <String Id="CUBRID_CustomValidWslDlg_Title">Invalid WSL Name</String>
+    <String Id="CUBRID_CustomValidWslDlg_Description">The WSL name is not valid.&#13;&#10;&#13;&#10;It is also used as the installation folder name, so it may contain only letters, digits, periods (.), underscores (_), and hyphens (-). Spaces and characters such as \ / : * ? " &lt; &gt; | are not allowed. It cannot be a reserved name (e.g. CON, NUL) or end with a dot.&#13;&#10;&#13;&#10;Please enter a valid name and try again.</String>
 
     <String Id="CUBRID_Check_Virt_Title">Virtualization Technology Disabled</String>
     <String Id="CUBRID_Check_Virt_Description">[CPU_BRAND] Virtualization technology is disabled in BIOS.&#13;&#10;&#13;&#10;Update your system or change BIOS settings and Run the installer again.</String>

@@ -228,7 +228,7 @@ int CUBRIDInstaller::EnableWindowsFeatures (MSIHANDLE hInstall, const InstallOpt
     }
   body += "Start-Sleep -Seconds 3; ";
 
-  int rc = RunPowerShellScript ("features", body, ENABLE_FEATURES_TIMEOUT_MS, "Stop", true);
+  int rc = RunPowerShellScript ("features", body, 1000, "Stop", true);
   if (rc == RPS_TIMEOUT)
     {
       return TIMEOUT;
@@ -271,7 +271,6 @@ bool CUBRIDInstaller::SetupWslDistro (const InstallOptions &options)
   body += "if ($?) { Write-Host 'WSL Import Successful.' } else { Write-Host 'WSL Import Failed. '; Start-Sleep -Seconds 5; exit 1 }; ";
   body += "Start-Sleep -Seconds 5; ";
 
-  // wsl --import can take many minutes for a large image -> no timeout (INFINITE).
   int rc = RunPowerShellScript ("import", body, 0, "Stop", true);
   return rc == 0;
 }
