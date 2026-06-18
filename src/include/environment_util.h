@@ -45,4 +45,5 @@ class EnvironmentUtil
     static bool CheckWindowsOptionalFeature (IWbemServices *pSvc, const std::string &featureName);
     static bool CheckWSLRebootRequired();
     static bool CheckWSLInstalled();
+    static bool CheckWSLServiceExists();
 };

@@ -48,6 +48,16 @@ bool EnvironmentUtil::CheckWSLInstalled()
   return SystemUtil::CheckRegistryValueExists (HKEY_LOCAL_MACHINE, registryKeyPath, "ProductCode");
 }
 
+bool EnvironmentUtil::CheckWSLServiceExists() {
+    SC_HANDLE hSCM = OpenSCManager(nullptr, nullptr, SC_MANAGER_CONNECT);
+    if (!hSCM) return false;
+    SC_HANDLE hSvc = OpenService(hSCM, "LxssManager", SERVICE_QUERY_STATUS);
+    bool exists = (hSvc != nullptr);
+    if (hSvc) CloseServiceHandle(hSvc);
+    CloseServiceHandle(hSCM);
+    return exists;
+}
+
 bool EnvironmentUtil::CheckWSLRebootRequired()
 {
   LPCSTR registryKeyPath = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Component Based Servicing\\RebootPending";
@@ -408,6 +418,9 @@ UINT EnvironmentUtil::RunAllEnvironmentChecks (MSIHANDLE hInstall)
       SetMsiProperty (hInstall, "CUB_SYSTEM_READY", systemReady ? "1" : "0");
 
       bool wslInstalled = CheckWSLInstalled();
+      if (!wslInstalled) {
+	wslInstalled = CheckWSLServiceExists();
+      }
       SetMsiProperty (hInstall, "CUB_WSL_INSTALLED", wslInstalled ? "1" : "0");
       if (wslInstalled)
 	{
