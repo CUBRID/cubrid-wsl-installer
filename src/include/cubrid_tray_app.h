@@ -71,7 +71,6 @@ class TrayApp
   private:
     std::string wslName;
     std::string installDir;
-    HANDLE wslProcessHandle;
     HWND hwnd_;
     NOTIFYICONDATA nid_;
     HMENU trayMenu_;

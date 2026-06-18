@@ -33,7 +33,7 @@ static const char *TRAY_MUTEX_NAME   = "Global\\CUBRID_WSL_Tray_App_Mutex";
 const int monitorInterval = 10;
 const std::string guideFileName = CUB_GUIDE_FILE;
 
-TrayApp::TrayApp() : hWnd (NULL), hIcon (NULL), isRunning (false), wslProcessHandle (NULL)
+TrayApp::TrayApp() : hWnd (NULL), hIcon (NULL), isRunning (false)
 {
 
 }
@@ -43,12 +43,6 @@ TrayApp::~TrayApp()
   if (hIcon)
     {
       DestroyIcon (hIcon);
-    }
-  if (wslProcessHandle)
-    {
-      TerminateProcess (wslProcessHandle, 0);
-      CloseHandle (wslProcessHandle);
-      wslProcessHandle = NULL;
     }
 }
 
@@ -295,13 +289,6 @@ std::string TrayApp::GetCUBRIDVersion()
 bool TrayApp::StartCUBRIDService()
 {
   Logger::GetInstance().LogInfo ("Starting CUBRID service...");
-  if (wslProcessHandle)
-    {
-      Logger::GetInstance().LogInfo ("StartCUBRIDService Terminating existing WSL process...");
-      TerminateProcess (wslProcessHandle, 0);
-      CloseHandle (wslProcessHandle);
-      wslProcessHandle = NULL;
-    }
 
   std::string command = BuildWslCommand ("cubrid service start", true);
   Logger::GetInstance().LogInfo ("StartCUBRIDService command: " + command);
@@ -310,7 +297,6 @@ bool TrayApp::StartCUBRIDService()
   if (hProcess != NULL)
     {
       CloseHandle (hProcess);
-      wslProcessHandle = NULL;
       Logger::GetInstance().LogInfo ("CUBRID service start request dispatched.");
       UpdateTrayStatus();
       return true;
@@ -325,14 +311,6 @@ bool TrayApp::StopCUBRIDService()
 
   std::string command = BuildWslCommand ("cubrid service stop");
   bool result = SystemUtil::ExecuteCommandWithoutResultWithTimeout (command, 10000);
-
-  if (wslProcessHandle)
-    {
-      Logger::GetInstance().LogInfo ("StopCUBRIDService Terminating background WSL process...");
-      TerminateProcess (wslProcessHandle, 0);
-      CloseHandle (wslProcessHandle);
-      wslProcessHandle = NULL;
-    }
 
   if (result)
     {
