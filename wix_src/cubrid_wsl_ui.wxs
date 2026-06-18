@@ -231,12 +231,6 @@
             <Dialog Id="CustomFinishDlg" Width="370" Height="270" Title="!(loc.CUBRID_Finish_Title)">
                 <Control Id="Banner" Type="Bitmap" X="0" Y="0" Width="370" Height="234" TabSkip="no" Text="WixUI_Bmp_Dialog" />
                 <Control Id="Finish" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.CUBRID_Finish)">
-                    <Publish Event="DoAction" Value="ActionCreateDemodb"><![CDATA[CREATE_DEMODB = 1]]></Publish>
-                    <Publish Event="DoAction" Value="ActionRegisterTrayApp"><![CDATA[REG_TRAY_APP = 1]]></Publish>
-                    <Publish Event="DoAction" Value="ActionCreateShortcut"><![CDATA[CREATE_SHORTCUT = 1]]></Publish>
-                    <Publish Event="DoAction" Value="ActionLaunchTrayApp"><![CDATA[START_TRAY_APP = 1]]></Publish>
-                    <Publish Event="DoAction" Value="ActionStartCubridService">1</Publish>
-                    <Publish Event="DoAction" Value="ActionUpdateInstalledSize">1</Publish>
                     <Publish Event="EndDialog" Value="Return"><![CDATA[1]]></Publish>
                 </Control>
                 <Control Id="Description" Type="Text" X="125" Y="23" Width="235" Height="12" Transparent="yes" NoPrefix="yes" Text="!(loc.CUBRID_Finish_Description)" />
