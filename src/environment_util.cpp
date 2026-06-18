@@ -292,13 +292,13 @@ UINT EnvironmentUtil::RunAllEnvironmentChecks (MSIHANDLE hInstall)
 
   try
     {
-      HRESULT hres = CoInitializeEx (0, COINIT_MULTITHREADED);
-      if (FAILED (hres))
+      HRESULT hres = CoInitializeEx (0, COINIT_APARTMENTTHREADED);
+      comInitialized = SUCCEEDED (hres);
+      if (FAILED (hres) && hres != RPC_E_CHANGED_MODE)
 	{
 	  SetMsiProperty (hInstall, "CUB_ENVIRONMENT_CHECK_OUTPUT", "ERROR: Failed to initialize COM");
 	  return ERROR_INSTALL_FAILURE;
 	}
-      comInitialized = true;
 
       hres = CoInitializeSecurity (
 		     NULL,                        // Security descriptor
@@ -314,7 +314,9 @@ UINT EnvironmentUtil::RunAllEnvironmentChecks (MSIHANDLE hInstall)
 
       if (FAILED (hres) && hres != RPC_E_TOO_LATE)
 	{
-	  CoUninitialize();
+	  if (comInitialized) {
+	    CoUninitialize();
+	  }
 	  SetMsiProperty (hInstall, "CUB_ENVIRONMENT_CHECK_OUTPUT", "ERROR: Failed to initialize COM security");
 	  return ERROR_INSTALL_FAILURE;
 	}
@@ -322,7 +324,9 @@ UINT EnvironmentUtil::RunAllEnvironmentChecks (MSIHANDLE hInstall)
       hres = CoCreateInstance (CLSID_WbemLocator, 0, CLSCTX_INPROC_SERVER, IID_IWbemLocator, (LPVOID *)&pLoc);
       if (FAILED (hres))
 	{
-	  CoUninitialize();
+	  if (comInitialized) {
+	    CoUninitialize();
+	  }
 	  SetMsiProperty (hInstall, "CUB_ENVIRONMENT_CHECK_OUTPUT", "ERROR: Failed to create WMI locator");
 	  return ERROR_INSTALL_FAILURE;
 	}
@@ -331,7 +335,9 @@ UINT EnvironmentUtil::RunAllEnvironmentChecks (MSIHANDLE hInstall)
       if (FAILED (hres))
 	{
 	  pLoc->Release();
-	  CoUninitialize();
+	  if (comInitialized) {
+	    CoUninitialize();
+	  }
 	  SetMsiProperty (hInstall, "CUB_ENVIRONMENT_CHECK_OUTPUT", "ERROR: Failed to connect to WMI");
 	  return ERROR_INSTALL_FAILURE;
 	}
@@ -342,7 +348,9 @@ UINT EnvironmentUtil::RunAllEnvironmentChecks (MSIHANDLE hInstall)
 	{
 	  pSvc->Release();
 	  pLoc->Release();
-	  CoUninitialize();
+	  if (comInitialized) {
+	    CoUninitialize();
+	  }
 	  SetMsiProperty (hInstall, "CUB_ENVIRONMENT_CHECK_OUTPUT", "ERROR: Failed to set WMI security");
 	  return ERROR_INSTALL_FAILURE;
 	}
@@ -454,7 +462,9 @@ UINT EnvironmentUtil::RunAllEnvironmentChecks (MSIHANDLE hInstall)
 
       pSvc->Release();
       pLoc->Release();
-      CoUninitialize();
+      if (comInitialized) {
+	CoUninitialize();
+      }
 
       return ERROR_SUCCESS;
 
