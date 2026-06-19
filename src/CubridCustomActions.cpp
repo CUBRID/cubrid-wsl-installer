@@ -228,7 +228,7 @@ extern "C" {
 	PROCESS_INFORMATION pi = { 0 };
 	std::string cmd = "\"" + trayAppPath + "\"";
 
-	if (CreateProcessA (NULL, (LPSTR)cmd.c_str(), NULL, NULL, FALSE, 0, NULL, workingDir.c_str(), &si, &pi))
+	if (CreateProcessA (NULL, cmd.data(), NULL, NULL, FALSE, 0, NULL, workingDir.c_str(), &si, &pi))
 	  {
 	    logger.LogInfo ("Tray application launched successfully via CreateProcess.");
 	    CloseHandle (pi.hProcess);

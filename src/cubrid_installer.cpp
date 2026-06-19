@@ -67,8 +67,8 @@ int RunPowerShellScript (const std::string &tag, const std::string &scriptBody,
   si.wShowWindow = showWindow ? SW_SHOW : SW_HIDE;
   ZeroMemory (&pi, sizeof (pi));
 
-  if (!CreateProcessA (NULL, (LPSTR)command.c_str(), NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL,
-                       SystemUtil::GetSystemDir().c_str(), &si, &pi))
+  if (!CreateProcessA (NULL, command.data(), NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL,
+                       SystemUtil::GetSystemDir().data(), &si, &pi))
     {
       logger.LogError ("Failed to start PowerShell process [" + tag + "]. Error: "
                        + std::to_string (GetLastError()));
@@ -160,7 +160,7 @@ bool CUBRIDInstaller::ExtractCubridImage (const std::string &imageFile, const st
   si.wShowWindow = SW_HIDE;
   ZeroMemory (&pi, sizeof (pi));
 
-  if (!CreateProcessA (NULL, (LPSTR)command.c_str(), NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+  if (!CreateProcessA (NULL, command.data(), NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
     {
       logger.LogError ("Failed to start tar process. Error: " + std::to_string (GetLastError()));
       return false;
