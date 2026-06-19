@@ -664,31 +664,6 @@ static std::string PrepareDemodbScript()
 
 extern "C" {
 
-  __declspec (dllexport) UINT __stdcall CreateDemodb (MSIHANDLE hInstall)
-  {
-    SetupMsiContext (hInstall);
-    logger.LogInfo ("Starting Demo Database creation (Async)...");
-
-    std::string wslName = "";
-    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_WSL_NAME, wslName))
-      {
-	logger.LogError ("Failed to get WSL name from registry");
-	return ERROR_SUCCESS;
-      }
-    logger.LogInfo ("WSL Name: " + wslName);
-
-    std::string scriptPath = PrepareDemodbScript();
-    if (scriptPath.empty())
-      {
-	return ERROR_SUCCESS;
-      }
-
-    std::thread t (CUBRIDInstaller::CreateDemodbWorker, wslName, scriptPath);
-    t.detach();
-
-    return ERROR_SUCCESS;
-  }
-
   __declspec (dllexport) UINT __stdcall CreateDemodbSync (MSIHANDLE hInstall)
   {
     SetupMsiContext (hInstall);
@@ -725,25 +700,15 @@ extern "C" {
     std::string name (wslName);
     bool isValid = true;
 
-    // The name is concatenated UNQUOTED into elevated PowerShell command lines
-    // (wsl --import / --unregister / -d ...) AND used as a folder name in the
-    // install path ([LocalAppDataFolder][CUB_DEFAULT_WSL_NAME]). The allowlist
-    // below already excludes every Windows folder-illegal character
-    // (\ / : * ? " < > |) and whitespace, plus all shell metacharacters. On top
-    // of that we must reject names that use legal characters but are still
-    // invalid as a folder: a trailing dot and Windows reserved device names.
     const size_t MAX_WSL_NAME_LEN = 64;
 
     if (name.empty () || name.length () > MAX_WSL_NAME_LEN) {
         isValid = false;
     } else if (name[0] == '-') {
-        // A leading '-' could be parsed as an option by wsl.exe.
         isValid = false;
     } else if (name == "." || name == "..") {
-        // Reserved path components; would break the folder / .lnk / marker paths.
         isValid = false;
     } else if (name.back () == '.') {
-        // A trailing dot is stripped by Windows and cannot be created as a folder.
         isValid = false;
     } else {
         for (char ch : name) {
@@ -758,9 +723,6 @@ extern "C" {
         }
 
         if (isValid) {
-            // Reject Windows reserved device names (CON, PRN, AUX, NUL,
-            // COM1-9, LPT1-9), case-insensitively, on the base before any dot
-            // (e.g. "CON" and "CON.foo" are both reserved as folder names).
             std::string base = name.substr (0, name.find ('.'));
             std::string upper;
             for (char ch : base) {

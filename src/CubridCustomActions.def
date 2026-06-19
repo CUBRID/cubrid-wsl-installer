@@ -8,5 +8,5 @@ EXPORTS
     CreateShortcut
     StartWSL
     UpdateInstalledSize
-    CreateDemodb
+    CreateDemodbSync
     CheckWslName
