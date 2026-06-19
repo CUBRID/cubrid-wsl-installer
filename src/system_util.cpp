@@ -8,6 +8,9 @@
 #include <filesystem>
 
 #include "system_util.h"
+#include "logger.h"
+
+static Logger &logger = Logger::GetInstance();
 
 namespace
 {
@@ -82,10 +85,7 @@ namespace
 	    DWORD newMode = mode;
 	    newMode &= ~ (ENABLE_PROCESSED_INPUT
 			  | ENABLE_LINE_INPUT
-			  | ENABLE_ECHO_INPUT
-			  | ENABLE_MOUSE_INPUT
-			  | ENABLE_QUICK_EDIT_MODE
-			  | ENABLE_WINDOW_INPUT);
+			  | ENABLE_ECHO_INPUT);
 	    newMode |= ENABLE_EXTENDED_FLAGS;
 	    SetConsoleMode (hIn, newMode);
 	  }
@@ -169,7 +169,6 @@ void SystemUtil::BlockChildConsoleInput (DWORD pid)
 	    DeleteMenu (hSys, SC_CLOSE,    MF_BYCOMMAND);
 	    DrawMenuBar (hwnd);
 	  }
-	EnableWindow (hwnd, FALSE);
       }
 
     DisableChildConsoleInputMode (pid);
@@ -254,12 +253,9 @@ SystemUtil::CommandResult SystemUtil::RunProcessWithTimeout (const std::string &
 
   if (hJob)
     {
-      if (!AssignProcessToJobObject (hJob, pi.hProcess)) {
-  if (hJob)
-    {
       if (!AssignProcessToJobObject (hJob, pi.hProcess))
         {
-          // Job 할당 실패: 잡 핸들 해제 후 일반 모드로 폴백
+          logger.LogWarning ("AssignProcessToJobObject failed: "+ std::to_string (GetLastError ()));	
           CloseHandle (hJob);
           hJob = NULL;
         }
