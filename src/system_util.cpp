@@ -127,6 +127,29 @@ namespace
     return s;
   }
 
+  static void KillProcessTreeByPid (DWORD pid)
+  {
+    std::string cmd = "taskkill /F /T /PID " + std::to_string (pid);
+
+    STARTUPINFOA si;
+    ZeroMemory (&si, sizeof (si));
+    si.cb = sizeof (si);
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
+
+    PROCESS_INFORMATION tk;
+    ZeroMemory (&tk, sizeof (tk));
+
+    std::string mutableCmd = cmd;
+    if (CreateProcessA (NULL, (LPSTR) mutableCmd.c_str(), NULL, NULL, FALSE,
+			CREATE_NO_WINDOW, NULL, NULL, &si, &tk))
+      {
+	WaitForSingleObject (tk.hProcess, 5000);
+	CloseHandle (tk.hProcess);
+	CloseHandle (tk.hThread);
+      }
+  }
+
 }
 
 void SystemUtil::BlockChildConsoleInput (DWORD pid)
@@ -231,7 +254,10 @@ SystemUtil::CommandResult SystemUtil::RunProcessWithTimeout (const std::string &
 
   if (hJob)
     {
-      AssignProcessToJobObject (hJob, pi.hProcess);
+      if (!AssignProcessToJobObject (hJob, pi.hProcess)) {
+	CloseHandle (hJob);
+	hJob = NULL;
+      }
     }
   ResumeThread (pi.hThread);
   res.launched = true;
@@ -267,6 +293,10 @@ SystemUtil::CommandResult SystemUtil::RunProcessWithTimeout (const std::string &
       if (hJob)
 	{
 	  TerminateJobObject (hJob, 1);
+	}
+      else
+	{
+	  KillProcessTreeByPid (pi.dwProcessId);
 	}
       TerminateProcess (pi.hProcess, 1);
     }
