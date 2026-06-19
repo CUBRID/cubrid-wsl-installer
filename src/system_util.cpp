@@ -255,9 +255,14 @@ SystemUtil::CommandResult SystemUtil::RunProcessWithTimeout (const std::string &
   if (hJob)
     {
       if (!AssignProcessToJobObject (hJob, pi.hProcess)) {
-	CloseHandle (hJob);
-	hJob = NULL;
-      }
+  if (hJob)
+    {
+      if (!AssignProcessToJobObject (hJob, pi.hProcess))
+        {
+          // Job 할당 실패: 잡 핸들 해제 후 일반 모드로 폴백
+          CloseHandle (hJob);
+          hJob = NULL;
+        }
     }
   ResumeThread (pi.hThread);
   res.launched = true;
