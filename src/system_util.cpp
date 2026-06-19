@@ -274,7 +274,20 @@ SystemUtil::CommandResult SystemUtil::RunProcessWithTimeout (const std::string &
   if (captureOutput)
     {
       const DWORD readerGraceMs = 3000;
-      if (WaitForSingleObject ((HANDLE) reader.native_handle(), readerGraceMs) == WAIT_OBJECT_0)
+      HANDLE readerHandle = (HANDLE) reader.native_handle();
+      bool readerDone = (WaitForSingleObject (readerHandle, readerGraceMs) == WAIT_OBJECT_0);
+
+      if (!readerDone)
+	{
+	  res.timedOut = true;
+	  for (int i = 0; i < 5 && !readerDone; ++i)
+	    {
+	      CancelSynchronousIo (readerHandle);
+	      readerDone = (WaitForSingleObject (readerHandle, 200) == WAIT_OBJECT_0);
+	    }
+	}
+
+      if (readerDone)
 	{
 	  reader.join();
 	  res.output = std::move (state->result);
@@ -282,7 +295,6 @@ SystemUtil::CommandResult SystemUtil::RunProcessWithTimeout (const std::string &
       else
 	{
 	  reader.detach();
-	  res.timedOut = true;
 	}
     }
 
