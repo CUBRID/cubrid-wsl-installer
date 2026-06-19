@@ -14,6 +14,7 @@ enum TrayIconState : int
 };
 
 #define WM_TRAYICON (WM_USER + 1)
+#define WM_APP_REFRESH_STATUS (WM_APP + 1)
 
 enum class CUBRIDStatus
 {
@@ -65,7 +66,6 @@ class TrayApp
 
     HWND hWnd;
     HICON hIcon;
-    bool isRunning;
     std::string logDir;
 
   private:
@@ -78,7 +78,7 @@ class TrayApp
     HICON iconRunning_;
     HICON iconError_;
 
-    std::atomic<bool> running_;
+    std::atomic<bool> appRunning_;
     std::thread monitorThread_;
     std::atomic<TrayIconState> currentState_;
 
@@ -90,6 +90,8 @@ class TrayApp
 
     bool StartCUBRID();
     bool StopCUBRID();
+
+    bool RunServiceOpAsync (const std::string &opLabel, const std::string &command);
 
     CUBRIDErrorCode ShowGuideFile();
 

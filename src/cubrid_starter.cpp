@@ -35,48 +35,23 @@ namespace
 	    "wsl.exe -d " + wslName + " -u cubrid --exec bash -c \"" +
 	    kEnvSetup + bashCmd + "\"";
 
-    STARTUPINFOA si{};
-    si.cb          = sizeof (si);
-    si.dwFlags     = STARTF_USESHOWWINDOW;
-    si.wShowWindow = SW_HIDE;
-    PROCESS_INFORMATION pi{};
-
-    std::string mutableCmd = cmd;
-    BOOL ok = CreateProcessA (
-		      NULL,
-		      mutableCmd.data(),
-		      NULL, NULL,
-		      FALSE,
-		      CREATE_NO_WINDOW,
-		      NULL, NULL,
-		      &si, &pi);
-
-    if (!ok)
+    SystemUtil::CommandResult r = SystemUtil::RunProcessWithTimeout (cmd, timeoutMs, false);
+    if (!r.launched)
       {
 	Logger::GetInstance().LogError (
-		"cubrid_starter: CreateProcess failed err=" +
-		std::to_string (GetLastError()) + " cmd=" + cmd);
+		"cubrid_starter: CreateProcess failed cmd=" + cmd);
 	return false;
       }
-
-    DWORD waitRc = WaitForSingleObject (pi.hProcess, timeoutMs);
-    if (waitRc == WAIT_TIMEOUT)
+    if (r.timedOut)
       {
 	Logger::GetInstance().LogWarning (
 		"cubrid_starter: child timed out after " +
-		std::to_string (timeoutMs) + "ms, terminating: " + bashCmd);
-	TerminateProcess (pi.hProcess, 1);
-	WaitForSingleObject (pi.hProcess, 5000);
+		std::to_string (timeoutMs) + "ms, terminated process tree: " + bashCmd);
       }
-
-    DWORD exitCode = 0;
-    GetExitCodeProcess (pi.hProcess, &exitCode);
-    CloseHandle (pi.hThread);
-    CloseHandle (pi.hProcess);
 
     if (outExit)
       {
-	*outExit = exitCode;
+	*outExit = r.exitCode;
       }
     return true;
   }
@@ -96,104 +71,31 @@ namespace
 	outStdout->clear();
       }
 
-    SECURITY_ATTRIBUTES sa{};
-    sa.nLength              = sizeof (sa);
-    sa.bInheritHandle       = TRUE;
-    sa.lpSecurityDescriptor = NULL;
-
-    HANDLE hReadPipe  = NULL;
-    HANDLE hWritePipe = NULL;
-    if (!CreatePipe (&hReadPipe, &hWritePipe, &sa, 0))
-      {
-	Logger::GetInstance().LogError (
-		"cubrid_starter: CreatePipe failed err=" +
-		std::to_string (GetLastError()));
-	return false;
-      }
-    SetHandleInformation (hReadPipe, HANDLE_FLAG_INHERIT, 0);
-
     std::string cmd =
 	    "wsl.exe -d " + wslName + " -u cubrid --exec bash -c \"" +
 	    kEnvSetup + bashCmd + "\"";
 
-    STARTUPINFOA si{};
-    si.cb          = sizeof (si);
-    si.dwFlags     = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
-    si.wShowWindow = SW_HIDE;
-    si.hStdOutput  = hWritePipe;
-    si.hStdError   = hWritePipe;
-    si.hStdInput   = NULL;
-    PROCESS_INFORMATION pi{};
-
-    std::string mutableCmd = cmd;
-    BOOL ok = CreateProcessA (
-		      NULL,
-		      mutableCmd.data(),
-		      NULL, NULL,
-		      TRUE,                  // bInheritHandles must be TRUE for std redir.
-		      CREATE_NO_WINDOW,
-		      NULL, NULL,
-		      &si, &pi);
-
-    CloseHandle (hWritePipe);
-
-    if (!ok)
+    SystemUtil::CommandResult r = SystemUtil::RunProcessWithTimeout (cmd, timeoutMs, true);
+    if (!r.launched)
       {
-	CloseHandle (hReadPipe);
 	Logger::GetInstance().LogError (
-		"cubrid_starter: CreateProcess failed err=" +
-		std::to_string (GetLastError()) + " cmd=" + cmd);
+		"cubrid_starter: CreateProcess failed cmd=" + cmd);
 	return false;
       }
-
-    std::atomic<bool> finished{false};
-    std::thread watchdog ([&]
-    {
-      const auto deadline =
-      std::chrono::steady_clock::now() +
-      std::chrono::milliseconds (timeoutMs);
-      while (!finished.load())
-	{
-	  if (WaitForSingleObject (pi.hProcess, 100) == WAIT_OBJECT_0)
-	    {
-	      return;
-	    }
-	  if (std::chrono::steady_clock::now() >= deadline)
-	    {
-	      Logger::GetInstance().LogWarning (
-		      "cubrid_starter: command timed out after " +
-		      std::to_string (timeoutMs) + "ms, terminating: " + bashCmd);
-	      TerminateProcess (pi.hProcess, 1);
-	      return;
-	    }
-	}
-    });
-
-    std::string out;
-    char  buf[4096];
-    DWORD bytesRead = 0;
-    while (ReadFile (hReadPipe, buf, sizeof (buf), &bytesRead, NULL) &&
-	   bytesRead > 0)
+    if (r.timedOut)
       {
-	out.append (buf, bytesRead);
+	Logger::GetInstance().LogWarning (
+		"cubrid_starter: command timed out after " +
+		std::to_string (timeoutMs) + "ms, terminated process tree: " + bashCmd);
       }
-
-    finished.store (true);
-    watchdog.join();
-    CloseHandle (hReadPipe);
-
-    DWORD exitCode = 0;
-    GetExitCodeProcess (pi.hProcess, &exitCode);
-    CloseHandle (pi.hThread);
-    CloseHandle (pi.hProcess);
 
     if (outExit)
       {
-	*outExit   = exitCode;
+	*outExit = r.exitCode;
       }
     if (outStdout)
       {
-	*outStdout = std::move (out);
+	*outStdout = std::move (r.output);
       }
     return true;
   }

@@ -93,16 +93,6 @@ namespace
     FreeConsole();
   }
 
-  static bool LaunchCommandHidden (const std::string &command, PROCESS_INFORMATION &pi)
-  {
-    STARTUPINFOA si;
-    ZeroMemory (&si, sizeof (si));
-    si.cb = sizeof (si);
-    ZeroMemory (&pi, sizeof (pi));
-    return CreateProcessA (NULL, (LPSTR)command.c_str(), NULL, NULL, FALSE,
-			   CREATE_NO_WINDOW, NULL, NULL, &si, &pi) != FALSE;
-  }
-
   static bool OpenOrCreateKeyWrite (HKEY root, const std::string &path, HKEY &outKey)
   {
     if (RegOpenKeyExA (root, path.c_str(), 0, KEY_WRITE, &outKey) == ERROR_SUCCESS)
@@ -173,70 +163,26 @@ const std::string &SystemUtil::GetSystemDir()
   return dir;
 }
 
-bool SystemUtil::ExecuteCommandWithoutResult (const std::string &command)
+SystemUtil::CommandResult SystemUtil::RunProcessWithTimeout (const std::string &command, DWORD timeoutMs,
+							    bool captureOutput)
 {
-  PROCESS_INFORMATION pi;
-  if (!LaunchCommandHidden (command, pi))
+  CommandResult res;
+
+  HANDLE hReadPipe  = INVALID_HANDLE_VALUE;
+  HANDLE hWritePipe = INVALID_HANDLE_VALUE;
+
+  if (captureOutput)
     {
-      return false;
+      SECURITY_ATTRIBUTES sa;
+      sa.nLength = sizeof (SECURITY_ATTRIBUTES);
+      sa.bInheritHandle = TRUE;
+      sa.lpSecurityDescriptor = NULL;
+      if (!CreatePipe (&hReadPipe, &hWritePipe, &sa, 0))
+	{
+	  return res;
+	}
+      SetHandleInformation (hReadPipe, HANDLE_FLAG_INHERIT, 0);
     }
-
-  WaitForSingleObject (pi.hProcess, INFINITE);
-  DWORD exitCode = 1;
-  GetExitCodeProcess (pi.hProcess, &exitCode);
-  CloseHandle (pi.hProcess);
-  CloseHandle (pi.hThread);
-  return exitCode == 0;
-}
-
-bool SystemUtil::ExecuteCommandWithoutResultWithTimeout (const std::string &command, DWORD timeoutMs)
-{
-  PROCESS_INFORMATION pi;
-  if (!LaunchCommandHidden (command, pi))
-    {
-      return false;
-    }
-
-  if (WaitForSingleObject (pi.hProcess, timeoutMs) == WAIT_TIMEOUT)
-    {
-      TerminateProcess (pi.hProcess, 1);
-      CloseHandle (pi.hProcess);
-      CloseHandle (pi.hThread);
-      return false;
-    }
-
-  DWORD exitCode = 1;
-  GetExitCodeProcess (pi.hProcess, &exitCode);
-  CloseHandle (pi.hProcess);
-  CloseHandle (pi.hThread);
-  return exitCode == 0;
-}
-
-HANDLE SystemUtil::ExecuteCommandWithOutResultAsync (const std::string &command)
-{
-  PROCESS_INFORMATION pi;
-  if (!LaunchCommandHidden (command, pi))
-    {
-      return NULL;
-    }
-  CloseHandle (pi.hThread);
-  return pi.hProcess;
-}
-
-std::string SystemUtil::ExecuteCommandWithTimeout (const std::string &command, DWORD timeoutMs)
-{
-  SECURITY_ATTRIBUTES sa;
-  sa.nLength = sizeof (SECURITY_ATTRIBUTES);
-  sa.bInheritHandle = TRUE;
-  sa.lpSecurityDescriptor = NULL;
-
-  HANDLE hReadPipe, hWritePipe;
-  if (!CreatePipe (&hReadPipe, &hWritePipe, &sa, 0))
-    {
-      return "";
-    }
-
-  SetHandleInformation (hReadPipe, HANDLE_FLAG_INHERIT, 0);
 
   HANDLE hJob = CreateJobObjectA (NULL, NULL);
   if (hJob)
@@ -251,22 +197,36 @@ std::string SystemUtil::ExecuteCommandWithTimeout (const std::string &command, D
   PROCESS_INFORMATION pi;
   ZeroMemory (&si, sizeof (si));
   si.cb = sizeof (si);
-  si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
-  si.hStdOutput = hWritePipe;
-  si.hStdError = hWritePipe;
+  si.dwFlags = STARTF_USESHOWWINDOW;
   si.wShowWindow = SW_HIDE;
+  if (captureOutput)
+    {
+      si.dwFlags |= STARTF_USESTDHANDLES;
+      si.hStdOutput = hWritePipe;
+      si.hStdError  = hWritePipe;
+      si.hStdInput  = NULL;
+    }
 
   ZeroMemory (&pi, sizeof (pi));
 
-  if (!CreateProcessA (NULL, (LPSTR)command.c_str(), NULL, NULL, TRUE,
+  std::string mutableCmd = command;
+  if (!CreateProcessA (NULL, (LPSTR) mutableCmd.c_str(), NULL, NULL,
+		       captureOutput ? TRUE : FALSE,
 		       CREATE_NO_WINDOW | CREATE_SUSPENDED, NULL, NULL, &si, &pi))
     {
-      if (hJob) {
-	CloseHandle (hJob);
-      }
-      CloseHandle (hReadPipe);
-      CloseHandle (hWritePipe);
-      return "";
+      if (hJob)
+	{
+	  CloseHandle (hJob);
+	}
+      if (hReadPipe != INVALID_HANDLE_VALUE)
+	{
+	  CloseHandle (hReadPipe);
+	}
+      if (hWritePipe != INVALID_HANDLE_VALUE)
+	{
+	  CloseHandle (hWritePipe);
+	}
+      return res;
     }
 
   if (hJob)
@@ -274,43 +234,65 @@ std::string SystemUtil::ExecuteCommandWithTimeout (const std::string &command, D
       AssignProcessToJobObject (hJob, pi.hProcess);
     }
   ResumeThread (pi.hThread);
+  res.launched = true;
 
-  CloseHandle (hWritePipe);
-
-  auto state = std::make_shared<PipeReaderState>();
-  state->hReadPipe = hReadPipe;
-  std::thread reader ([state]
-  {
-    char buffer[4096];
-    DWORD bytesRead = 0;
-    while (ReadFile (state->hReadPipe, buffer, sizeof (buffer) - 1, &bytesRead, NULL) && bytesRead > 0)
-      {
-	state->result.append (buffer, bytesRead);
-      }
-    CloseHandle (state->hReadPipe);
-    state->hReadPipe = INVALID_HANDLE_VALUE;
-  });
-
-  bool timedOut = (WaitForSingleObject (pi.hProcess, timeoutMs) == WAIT_TIMEOUT);
-  if (timedOut)
+  if (captureOutput)
     {
-      if (hJob) {
-	TerminateJobObject (hJob, 1);
-      }
+      CloseHandle (hWritePipe);
+      hWritePipe = INVALID_HANDLE_VALUE;
+    }
+
+  std::shared_ptr<PipeReaderState> state;
+  std::thread reader;
+  if (captureOutput)
+    {
+      state = std::make_shared<PipeReaderState>();
+      state->hReadPipe = hReadPipe;
+      reader = std::thread ([state]
+      {
+	char buffer[4096];
+	DWORD bytesRead = 0;
+	while (ReadFile (state->hReadPipe, buffer, sizeof (buffer) - 1, &bytesRead, NULL) && bytesRead > 0)
+	  {
+	    state->result.append (buffer, bytesRead);
+	  }
+	CloseHandle (state->hReadPipe);
+	state->hReadPipe = INVALID_HANDLE_VALUE;
+      });
+    }
+
+  res.timedOut = (WaitForSingleObject (pi.hProcess, timeoutMs) == WAIT_TIMEOUT);
+  if (res.timedOut)
+    {
+      if (hJob)
+	{
+	  TerminateJobObject (hJob, 1);
+	}
       TerminateProcess (pi.hProcess, 1);
     }
 
-  std::string output;
-  const DWORD readerGraceMs = 3000;
-  if (WaitForSingleObject ((HANDLE) reader.native_handle(), readerGraceMs) == WAIT_OBJECT_0)
+  if (captureOutput)
     {
-      reader.join();
-      output = std::move (state->result);
+      const DWORD readerGraceMs = 3000;
+      if (WaitForSingleObject ((HANDLE) reader.native_handle(), readerGraceMs) == WAIT_OBJECT_0)
+	{
+	  reader.join();
+	  res.output = std::move (state->result);
+	}
+      else
+	{
+	  reader.detach();
+	  res.timedOut = true;
+	}
     }
-  else
+
+  if (!res.timedOut)
     {
-      reader.detach();
-      timedOut = true;
+      DWORD code = 0;
+      if (GetExitCodeProcess (pi.hProcess, &code))
+	{
+	  res.exitCode = code;
+	}
     }
 
   CloseHandle (pi.hProcess);
@@ -319,8 +301,25 @@ std::string SystemUtil::ExecuteCommandWithTimeout (const std::string &command, D
     {
       CloseHandle (hJob);
     }
+  return res;
+}
 
-  return timedOut ? std::string() : output;
+bool SystemUtil::ExecuteCommandWithoutResult (const std::string &command)
+{
+  CommandResult r = RunProcessWithTimeout (command, INFINITE, false);
+  return r.launched && r.exitCode == 0;
+}
+
+bool SystemUtil::ExecuteCommandWithoutResultWithTimeout (const std::string &command, DWORD timeoutMs)
+{
+  CommandResult r = RunProcessWithTimeout (command, timeoutMs, false);
+  return r.launched && !r.timedOut && r.exitCode == 0;
+}
+
+std::string SystemUtil::ExecuteCommandWithTimeout (const std::string &command, DWORD timeoutMs)
+{
+  CommandResult r = RunProcessWithTimeout (command, timeoutMs, true);
+  return r.timedOut ? std::string() : r.output;
 }
 
 bool SystemUtil::GetRegistryValueString (const HKEY rootKey, const std::string &keyPath, const std::string &valueName,

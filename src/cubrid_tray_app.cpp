@@ -33,9 +33,13 @@ static const char *TRAY_MUTEX_NAME   = "Global\\CUBRID_WSL_Tray_App_Mutex";
 const int monitorInterval = 10;
 const std::string guideFileName = CUB_GUIDE_FILE;
 
-TrayApp::TrayApp() : hWnd (NULL), hIcon (NULL), isRunning (false)
-{
+static constexpr DWORD STATUS_TIMEOUT_MS = 5 * 1000;
 
+static std::atomic<bool> startEndServiceRunning_ {false};
+
+TrayApp::TrayApp() : hWnd (NULL), hIcon (NULL)
+{
+  appRunning_.store(false);
 }
 
 TrayApp::~TrayApp()
@@ -145,12 +149,12 @@ CUBRIDErrorCode TrayApp::Initialize()
 void TrayApp::Run()
 {
   Logger::GetInstance().LogInfo ("Starting Tray application...");
-  isRunning = true;
+  appRunning_.store(true);
 
   std::thread monitorThread (&TrayApp::MonitorCUBRIDStatus, this);
 
   MSG msg;
-  while (isRunning && GetMessage (&msg, NULL, 0, 0))
+  while (appRunning_.load() && GetMessage (&msg, NULL, 0, 0))
     {
       TranslateMessage (&msg);
       DispatchMessage (&msg);
@@ -176,7 +180,7 @@ void TrayApp::Shutdown()
       hWnd = NULL;
     }
 
-  isRunning = false;
+  appRunning_.store(false);
 }
 
 bool TrayApp::AddTrayIcon()
@@ -237,7 +241,7 @@ CUBRIDStatus TrayApp::GetCUBRIDStatus()
   Logger::GetInstance().LogInfo ("Checking CUBRID service status...");
 
   std::string command = BuildWslCommand ("cubrid service status");
-  std::string result = SystemUtil::ExecuteCommandWithTimeout (command, 5000);
+  std::string result = SystemUtil::ExecuteCommandWithTimeout (command, STATUS_TIMEOUT_MS);
 
   Logger::GetInstance().LogInfo ("Checking CUBRID service status command : " + command);
 
@@ -271,7 +275,7 @@ std::string TrayApp::GetCUBRIDVersion()
   Logger::GetInstance().LogInfo ("Getting CUBRID version...");
 
   std::string command = BuildWslCommand ("cubrid_rel");
-  std::string result = SystemUtil::ExecuteCommandWithTimeout (command, 5000);
+  std::string result = SystemUtil::ExecuteCommandWithTimeout (command, STATUS_TIMEOUT_MS);
 
   if (result.empty())
     {
@@ -286,40 +290,51 @@ std::string TrayApp::GetCUBRIDVersion()
   return result;
 }
 
+bool TrayApp::RunServiceOpAsync (const std::string &opLabel, const std::string &command)
+{
+  bool expected = false;
+  if (!startEndServiceRunning_.compare_exchange_strong (expected, true))
+    {
+      Logger::GetInstance().LogInfo (opLabel + " ignored: another service operation is in progress.");
+      return false;
+    }
+
+  HWND hwndCopy = hWnd;
+  std::string cmd = command;
+  std::string label = opLabel;
+  try
+    {
+      std::thread ([cmd, hwndCopy, label]
+      {
+	SystemUtil::ExecuteCommandWithoutResult (cmd);
+	Logger::GetInstance().LogInfo (label + " worker finished.");
+	startEndServiceRunning_.store (false);
+	if (hwndCopy)
+	  {
+	    PostMessageA (hwndCopy, WM_APP_REFRESH_STATUS, 0, 0);
+	  }
+      }).detach();
+    }
+  catch (const std::exception &e)
+    {
+      startEndServiceRunning_.store (false);
+      Logger::GetInstance().LogError (label + " failed to start worker thread: " + e.what());
+      return false;
+    }
+
+  return true;
+}
+
 bool TrayApp::StartCUBRIDService()
 {
   Logger::GetInstance().LogInfo ("Starting CUBRID service...");
-
-  std::string command = BuildWslCommand ("cubrid service start", true);
-  Logger::GetInstance().LogInfo ("StartCUBRIDService command: " + command);
-  HANDLE hProcess = SystemUtil::ExecuteCommandWithOutResultAsync (command);
-
-  if (hProcess != NULL)
-    {
-      CloseHandle (hProcess);
-      Logger::GetInstance().LogInfo ("CUBRID service start request dispatched.");
-      UpdateTrayStatus();
-      return true;
-    }
-  Logger::GetInstance().LogError ("Failed to start CUBRID service.");
-  return false;
+  return RunServiceOpAsync ("StartCUBRIDService", BuildWslCommand ("cubrid service start", true));
 }
 
 bool TrayApp::StopCUBRIDService()
 {
   Logger::GetInstance().LogInfo ("Stopping CUBRID service...");
-
-  std::string command = BuildWslCommand ("cubrid service stop");
-  bool result = SystemUtil::ExecuteCommandWithoutResultWithTimeout (command, 10000);
-
-  if (result)
-    {
-      Logger::GetInstance().LogInfo ("CUBRID service stopped successfully.");
-      UpdateTrayStatus();
-      return true;
-    }
-  Logger::GetInstance().LogWarning ("Failed to stop CUBRID service (timeout or error).");
-  return false;
+  return RunServiceOpAsync ("StopCUBRIDService", BuildWslCommand ("cubrid service stop"));
 }
 
 void TrayApp::ShowAboutDialog()
@@ -405,7 +420,7 @@ void TrayApp::MonitorCUBRIDStatus()
 {
   Logger::GetInstance().LogInfo ("Starting CUBRID status monitoring...");
 
-  while (isRunning)
+  while (appRunning_.load())
     {
       UpdateTrayStatus();
       std::this_thread::sleep_for (std::chrono::seconds (monitorInterval));
@@ -510,6 +525,13 @@ LRESULT CALLBACK TrayApp::WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 	}
       break;
 
+    case WM_APP_REFRESH_STATUS:
+      if (app)
+	{
+	  app->UpdateTrayStatus();
+	}
+      break;
+
     case WM_COMMAND:
       if (app)
 	{
@@ -521,11 +543,11 @@ LRESULT CALLBACK TrayApp::WindowProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 	      break;
 	    case TrayApp::MENU_START:
 	      app->StartCUBRIDService();
-	      Logger::GetInstance().LogInfo ("CUBRID service started successfully.");
+	      Logger::GetInstance().LogInfo ("Execute CUBRID service start.");
 	      break;
 	    case TrayApp::MENU_STOP:
 	      app->StopCUBRIDService();
-	      Logger::GetInstance().LogInfo ("CUBRID service stopped successfully.");
+	      Logger::GetInstance().LogInfo ("Execute CUBRID service stop");
 	      break;
 	    case TrayApp::MENU_README:
 	      errorCode = app->ShowGuideFile();
