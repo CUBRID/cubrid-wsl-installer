@@ -71,7 +71,8 @@ extern "C" {
 
     logger.LogInfo ("Reading configuration from registry: " + std::string (REGISTRY_KEY_PATH));
 
-    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_INSTALL_DIR, installDir))
+    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_INSTALL_DIR,
+	installDir))
       {
 	logger.LogError ("Failed to get InstallDir from registry");
 	return ERROR_INSTALL_FAILURE;
@@ -83,19 +84,22 @@ extern "C" {
 	return ERROR_INSTALL_FAILURE;
       }
 
-    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_TRAY_APP_FILE, trayAppFile))
+    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_TRAY_APP_FILE,
+	trayAppFile))
       {
 	logger.LogError ("Failed to get TrayAppFile from registry");
 	return ERROR_INSTALL_FAILURE;
       }
 
-    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_TRAY_APP_LINK_FILE, trayAppLinkFile))
+    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_TRAY_APP_LINK_FILE,
+	trayAppLinkFile))
       {
 	logger.LogError ("Failed to get TrayAppLinkFile from registry");
 	return ERROR_INSTALL_FAILURE;
       }
 
-    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_USERS_DESKTOP_FOLDER, desktopDir))
+    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_USERS_DESKTOP_FOLDER,
+	desktopDir))
       {
 	logger.LogError ("Failed to get UsersDesktopFolder from registry");
 	return ERROR_INSTALL_FAILURE;
@@ -146,13 +150,15 @@ extern "C" {
 
     logger.LogInfo ("Reading configuration from registry: " + std::string (REGISTRY_KEY_PATH));
 
-    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_INSTALL_DIR, installDir))
+    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_INSTALL_DIR,
+	installDir))
       {
 	logger.LogError ("Failed to get InstallDir from registry");
 	return ERROR_INSTALL_FAILURE;
       }
 
-    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_TRAY_APP_FILE, trayAppFile))
+    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_TRAY_APP_FILE,
+	trayAppFile))
       {
 	logger.LogError ("Failed to get TrayAppFile from registry");
 	return ERROR_INSTALL_FAILURE;
@@ -198,7 +204,8 @@ extern "C" {
 
     logger.LogInfo ("Reading configuration from registry: " + std::string (REGISTRY_KEY_PATH));
 
-    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_INSTALL_DIR, installDir))
+    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_INSTALL_DIR,
+	installDir))
       {
 	logger.LogError ("Failed to get InstallDir from registry");
 	return ERROR_INSTALL_FAILURE;
@@ -210,7 +217,8 @@ extern "C" {
 	return ERROR_INSTALL_FAILURE;
       }
 
-    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_TRAY_APP_FILE, trayAppFile))
+    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_TRAY_APP_FILE,
+	trayAppFile))
       {
 	logger.LogError ("Failed to get TrayAppFile from registry");
 	return ERROR_INSTALL_FAILURE;
@@ -284,7 +292,8 @@ extern "C" {
     logger.LogInfo ("Reading configuration from registry: " + installOptions.registryKeyPath);
 
     std::string regValue;
-    if (SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, installOptions.registryKeyPath, REGISTRY_VALUE_NAME_WSL_NAME, regValue))
+    if (SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, installOptions.registryKeyPath, REGISTRY_VALUE_NAME_WSL_NAME,
+					    regValue))
       {
 	wslName = regValue;
       }
@@ -310,7 +319,8 @@ extern "C" {
 	installer.UninstallWsl (wslName);
       }
 
-    if (SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, installOptions.registryKeyPath, REGISTRY_VALUE_NAME_INSTALL_DIR, regValue))
+    if (SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, installOptions.registryKeyPath,
+					    REGISTRY_VALUE_NAME_INSTALL_DIR, regValue))
       {
 	installPath = regValue;
       }
@@ -319,7 +329,8 @@ extern "C" {
 	logger.LogWarning ("Failed to get install path from registry");
       }
 
-    if (SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, installOptions.registryKeyPath, REGISTRY_VALUE_NAME_IMAGE_FILE, regValue))
+    if (SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, installOptions.registryKeyPath,
+					    REGISTRY_VALUE_NAME_IMAGE_FILE, regValue))
       {
 	cubridImageFile = regValue;
       }
@@ -328,7 +339,8 @@ extern "C" {
 	logger.LogWarning ("Failed to get image file from registry");
       }
 
-    if (SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, installOptions.registryKeyPath, REGISTRY_VALUE_NAME_TRAY_APP_FILE, regValue))
+    if (SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, installOptions.registryKeyPath,
+					    REGISTRY_VALUE_NAME_TRAY_APP_FILE, regValue))
       {
 	trayAppFile = regValue;
       }
@@ -337,7 +349,8 @@ extern "C" {
 	logger.LogWarning ("Failed to get tray app file from registry");
       }
 
-    if (SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, installOptions.registryKeyPath, REGISTRY_VALUE_NAME_TRAY_APP_LINK_FILE,
+    if (SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, installOptions.registryKeyPath,
+					    REGISTRY_VALUE_NAME_TRAY_APP_LINK_FILE,
 					    regValue))
       {
 	trayAppLinkFile = regValue;
@@ -382,7 +395,8 @@ extern "C" {
       }
 
     std::string desktopDir = "";
-    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, installOptions.registryKeyPath, REGISTRY_VALUE_NAME_USERS_DESKTOP_FOLDER,
+    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, installOptions.registryKeyPath,
+	REGISTRY_VALUE_NAME_USERS_DESKTOP_FOLDER,
 	desktopDir))
       {
 	logger.LogError ("Failed to get Desktop directory from registry");
@@ -472,23 +486,28 @@ extern "C" {
 	logger.LogInfo ("Reading configuration from registry: " + options.registryKeyPath);
 
 	std::string regValue;
-	if (SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, options.registryKeyPath, REGISTRY_VALUE_NAME_INSTALL_DIR, regValue))
+	if (SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, options.registryKeyPath, REGISTRY_VALUE_NAME_INSTALL_DIR,
+						regValue))
 	  {
 	    options.installPath = regValue;
 	  }
-	if (SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, options.registryKeyPath, REGISTRY_VALUE_NAME_WSL_NAME, regValue))
+	if (SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, options.registryKeyPath, REGISTRY_VALUE_NAME_WSL_NAME,
+						regValue))
 	  {
 	    options.wslName = regValue;
 	  }
-	if (SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, options.registryKeyPath, REGISTRY_VALUE_NAME_IMAGE_FILE, regValue))
+	if (SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, options.registryKeyPath, REGISTRY_VALUE_NAME_IMAGE_FILE,
+						regValue))
 	  {
 	    options.cubridImageFile = regValue;
 	  }
-	if (SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, options.registryKeyPath, REGISTRY_VALUE_NAME_TRAY_APP_FILE, regValue))
+	if (SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, options.registryKeyPath, REGISTRY_VALUE_NAME_TRAY_APP_FILE,
+						regValue))
 	  {
 	    options.trayAppFile = regValue;
 	  }
-	if (SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, options.registryKeyPath, REGISTRY_VALUE_NAME_TRAY_APP_LINK_FILE, regValue))
+	if (SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, options.registryKeyPath,
+						REGISTRY_VALUE_NAME_TRAY_APP_LINK_FILE, regValue))
 	  {
 	    options.trayAppLinkFile = regValue;
 	  }
@@ -551,7 +570,8 @@ extern "C" {
 
     logger.LogInfo ("Reading configuration from registry: " + std::string (REGISTRY_KEY_PATH));
 
-    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_INSTALL_DIR, installDir))
+    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_INSTALL_DIR,
+	installDir))
       {
 	logger.LogError ("Failed to get InstallDir from registry");
 	return ERROR_SUCCESS;
@@ -617,53 +637,54 @@ extern "C" {
 }
 
 static std::string PrepareDemodbScript()
-  {
-    std::string scriptContent =
-	    "#!/bin/bash\n"
-	    ". ~/.cubrid.sh\n"
-	    "DEMODB_NAME=demodb\n"
-	    "\n"
-	    "chown -R cubrid:cubrid \"$CUBRID_DATABASES\"\n"
-	    "echo \"Initializing database $DEMODB_NAME...\"\n"
-	    "\n"
-	    "if [ ! -d \"$CUBRID_DATABASES/$DEMODB_NAME\" ]; then\n"
-	    "    echo \"Demo database directory does not exist. Creating it...\" >&2\n"
-	    "    mkdir -p \"$CUBRID_DATABASES/$DEMODB_NAME\"\n"
-	    "fi\n"
-	    "\n"
-	    "cd \"$CUBRID_DATABASES/$DEMODB_NAME\"\n"
-	    "\n"
-	    "if ! cubrid createdb --db-volume-size=100M --log-volume-size=100M $DEMODB_NAME en_US.utf8 > /dev/null 2>&1; then\n"
-	    "    echo \"Failed to create demo database ($DEMODB_NAME).\" >&2\n"
-	    "    exit 1\n"
-	    "fi\n"
-	    "\n"
-	    "if ! cubrid loaddb -u dba -s $CUBRID/demo/demodb_schema -d $CUBRID/demo/demodb_objects $DEMODB_NAME > /dev/null 2>&1; then\n"
-	    "    echo \"Failed to load demo database data.\" >&2\n"
-	    "    exit 1\n"
-	    "fi\n"
-	    "\n"
-	    "exit 0\n";
+{
+  std::string scriptContent =
+	  "#!/bin/bash\n"
+	  ". ~/.cubrid.sh\n"
+	  "DEMODB_NAME=demodb\n"
+	  "\n"
+	  "chown -R cubrid:cubrid \"$CUBRID_DATABASES\"\n"
+	  "echo \"Initializing database $DEMODB_NAME...\"\n"
+	  "\n"
+	  "if [ ! -d \"$CUBRID_DATABASES/$DEMODB_NAME\" ]; then\n"
+	  "    echo \"Demo database directory does not exist. Creating it...\" >&2\n"
+	  "    mkdir -p \"$CUBRID_DATABASES/$DEMODB_NAME\"\n"
+	  "fi\n"
+	  "\n"
+	  "cd \"$CUBRID_DATABASES/$DEMODB_NAME\"\n"
+	  "\n"
+	  "if ! cubrid createdb --db-volume-size=100M --log-volume-size=100M $DEMODB_NAME en_US.utf8 > /dev/null 2>&1; then\n"
+	  "    echo \"Failed to create demo database ($DEMODB_NAME).\" >&2\n"
+	  "    exit 1\n"
+	  "fi\n"
+	  "\n"
+	  "if ! cubrid loaddb -u dba -s $CUBRID/demo/demodb_schema -d $CUBRID/demo/demodb_objects $DEMODB_NAME > /dev/null 2>&1; then\n"
+	  "    echo \"Failed to load demo database data.\" >&2\n"
+	  "    exit 1\n"
+	  "fi\n"
+	  "\n"
+	  "exit 0\n";
 
-    char tempPath[MAX_PATH];
-    if (GetTempPathA (MAX_PATH, tempPath) == 0) {
-	logger.LogError("Failed to get temp path. Error: " + std::to_string(GetLastError()));
-    	return "";
+  char tempPath[MAX_PATH];
+  if (GetTempPathA (MAX_PATH, tempPath) == 0)
+    {
+      logger.LogError ("Failed to get temp path. Error: " + std::to_string (GetLastError()));
+      return "";
     }
-    std::string scriptPath = std::string (tempPath) + "create_demodb.sh";
+  std::string scriptPath = std::string (tempPath) + "create_demodb.sh";
 
-    std::ofstream scriptFile (scriptPath, std::ios::binary);
-    if (!scriptFile.is_open())
-      {
-	logger.LogError ("Failed to create temporary script file: " + scriptPath);
-	return "";
-      }
-    scriptFile.write (scriptContent.c_str(), scriptContent.size());
-    scriptFile.close();
+  std::ofstream scriptFile (scriptPath, std::ios::binary);
+  if (!scriptFile.is_open())
+    {
+      logger.LogError ("Failed to create temporary script file: " + scriptPath);
+      return "";
+    }
+  scriptFile.write (scriptContent.c_str(), scriptContent.size());
+  scriptFile.close();
 
-    logger.LogInfo ("Created temporary script: " + scriptPath);
-    return scriptPath;
-  }
+  logger.LogInfo ("Created temporary script: " + scriptPath);
+  return scriptPath;
+}
 
 extern "C" {
 
@@ -691,58 +712,75 @@ extern "C" {
     return ERROR_SUCCESS;
   }
 
-  __declspec (dllexport) UINT __stdcall CheckWslName (MSIHANDLE hInstall) {
+  __declspec (dllexport) UINT __stdcall CheckWslName (MSIHANDLE hInstall)
+  {
     char wslName[256] = { 0 };
     DWORD dwBufSize = sizeof (wslName);
 
-    if (MsiGetPropertyA (hInstall, "CUB_DEFAULT_WSL_NAME", wslName, &dwBufSize) != ERROR_SUCCESS) {
-        MsiSetPropertyA (hInstall, "CUB_WSL_NAME_VALID", "0");
-        return ERROR_SUCCESS;
-    }
+    if (MsiGetPropertyA (hInstall, "CUB_DEFAULT_WSL_NAME", wslName, &dwBufSize) != ERROR_SUCCESS)
+      {
+	MsiSetPropertyA (hInstall, "CUB_WSL_NAME_VALID", "0");
+	return ERROR_SUCCESS;
+      }
 
     std::string name (wslName);
     bool isValid = true;
 
     const size_t MAX_WSL_NAME_LEN = 64;
 
-    if (name.empty () || name.length () > MAX_WSL_NAME_LEN) {
-        isValid = false;
-    } else if (name[0] == '-') {
-        isValid = false;
-    } else if (name == "." || name == "..") {
-        isValid = false;
-    } else if (name.back () == '.') {
-        isValid = false;
-    } else {
-        for (char ch : name) {
-            bool allowed = (ch >= 'A' && ch <= 'Z')
-                           || (ch >= 'a' && ch <= 'z')
-                           || (ch >= '0' && ch <= '9')
-                           || ch == '.' || ch == '_' || ch == '-';
-            if (!allowed) {
-                isValid = false;
-                break;
-            }
-        }
+    if (name.empty () || name.length () > MAX_WSL_NAME_LEN)
+      {
+	isValid = false;
+      }
+    else if (name[0] == '-')
+      {
+	isValid = false;
+      }
+    else if (name == "." || name == "..")
+      {
+	isValid = false;
+      }
+    else if (name.back () == '.')
+      {
+	isValid = false;
+      }
+    else
+      {
+	for (char ch : name)
+	  {
+	    bool allowed = (ch >= 'A' && ch <= 'Z')
+			   || (ch >= 'a' && ch <= 'z')
+			   || (ch >= '0' && ch <= '9')
+			   || ch == '.' || ch == '_' || ch == '-';
+	    if (!allowed)
+	      {
+		isValid = false;
+		break;
+	      }
+	  }
 
-        if (isValid) {
-            std::string base = name.substr (0, name.find ('.'));
-            std::string upper;
-            for (char ch : base) {
-                upper.push_back ((char) toupper ((unsigned char) ch));
-            }
+	if (isValid)
+	  {
+	    std::string base = name.substr (0, name.find ('.'));
+	    std::string upper;
+	    for (char ch : base)
+	      {
+		upper.push_back ((char) toupper ((unsigned char) ch));
+	      }
 
-            bool reserved = (upper == "CON" || upper == "PRN" || upper == "AUX" || upper == "NUL");
-            if (!reserved && upper.length () == 4
-                && (upper.compare (0, 3, "COM") == 0 || upper.compare (0, 3, "LPT") == 0)
-                && upper[3] >= '1' && upper[3] <= '9') {
-                reserved = true;
-            }
-            if (reserved) {
-                isValid = false;
-            }
-        }
-    }
+	    bool reserved = (upper == "CON" || upper == "PRN" || upper == "AUX" || upper == "NUL");
+	    if (!reserved && upper.length () == 4
+		&& (upper.compare (0, 3, "COM") == 0 || upper.compare (0, 3, "LPT") == 0)
+		&& upper[3] >= '1' && upper[3] <= '9')
+	      {
+		reserved = true;
+	      }
+	    if (reserved)
+	      {
+		isValid = false;
+	      }
+	  }
+      }
 
     MsiSetPropertyA (hInstall, "CUB_WSL_NAME_VALID", isValid ? "1" : "0");
     return ERROR_SUCCESS;

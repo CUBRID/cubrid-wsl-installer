@@ -48,14 +48,21 @@ bool EnvironmentUtil::CheckWSLInstalled()
   return SystemUtil::CheckRegistryValueExists (HKEY_LOCAL_MACHINE, registryKeyPath, "ProductCode");
 }
 
-bool EnvironmentUtil::CheckWSLServiceExists() {
-    SC_HANDLE hSCM = OpenSCManager(nullptr, nullptr, SC_MANAGER_CONNECT);
-    if (!hSCM) return false;
-    SC_HANDLE hSvc = OpenService(hSCM, "LxssManager", SERVICE_QUERY_STATUS);
-    bool exists = (hSvc != nullptr);
-    if (hSvc) CloseServiceHandle(hSvc);
-    CloseServiceHandle(hSCM);
-    return exists;
+bool EnvironmentUtil::CheckWSLServiceExists()
+{
+  SC_HANDLE hSCM = OpenSCManager (nullptr, nullptr, SC_MANAGER_CONNECT);
+  if (!hSCM)
+    {
+      return false;
+    }
+  SC_HANDLE hSvc = OpenService (hSCM, "LxssManager", SERVICE_QUERY_STATUS);
+  bool exists = (hSvc != nullptr);
+  if (hSvc)
+    {
+      CloseServiceHandle (hSvc);
+    }
+  CloseServiceHandle (hSCM);
+  return exists;
 }
 
 bool EnvironmentUtil::CheckWSLRebootRequired()
@@ -324,9 +331,10 @@ UINT EnvironmentUtil::RunAllEnvironmentChecks (MSIHANDLE hInstall)
 
       if (FAILED (hres) && hres != RPC_E_TOO_LATE)
 	{
-	  if (comInitialized) {
-	    CoUninitialize();
-	  }
+	  if (comInitialized)
+	    {
+	      CoUninitialize();
+	    }
 	  SetMsiProperty (hInstall, "CUB_ENVIRONMENT_CHECK_OUTPUT", "ERROR: Failed to initialize COM security");
 	  return ERROR_INSTALL_FAILURE;
 	}
@@ -334,9 +342,10 @@ UINT EnvironmentUtil::RunAllEnvironmentChecks (MSIHANDLE hInstall)
       hres = CoCreateInstance (CLSID_WbemLocator, 0, CLSCTX_INPROC_SERVER, IID_IWbemLocator, (LPVOID *)&pLoc);
       if (FAILED (hres))
 	{
-	  if (comInitialized) {
-	    CoUninitialize();
-	  }
+	  if (comInitialized)
+	    {
+	      CoUninitialize();
+	    }
 	  SetMsiProperty (hInstall, "CUB_ENVIRONMENT_CHECK_OUTPUT", "ERROR: Failed to create WMI locator");
 	  return ERROR_INSTALL_FAILURE;
 	}
@@ -345,9 +354,10 @@ UINT EnvironmentUtil::RunAllEnvironmentChecks (MSIHANDLE hInstall)
       if (FAILED (hres))
 	{
 	  pLoc->Release();
-	  if (comInitialized) {
-	    CoUninitialize();
-	  }
+	  if (comInitialized)
+	    {
+	      CoUninitialize();
+	    }
 	  SetMsiProperty (hInstall, "CUB_ENVIRONMENT_CHECK_OUTPUT", "ERROR: Failed to connect to WMI");
 	  return ERROR_INSTALL_FAILURE;
 	}
@@ -358,9 +368,10 @@ UINT EnvironmentUtil::RunAllEnvironmentChecks (MSIHANDLE hInstall)
 	{
 	  pSvc->Release();
 	  pLoc->Release();
-	  if (comInitialized) {
-	    CoUninitialize();
-	  }
+	  if (comInitialized)
+	    {
+	      CoUninitialize();
+	    }
 	  SetMsiProperty (hInstall, "CUB_ENVIRONMENT_CHECK_OUTPUT", "ERROR: Failed to set WMI security");
 	  return ERROR_INSTALL_FAILURE;
 	}
@@ -418,9 +429,10 @@ UINT EnvironmentUtil::RunAllEnvironmentChecks (MSIHANDLE hInstall)
       SetMsiProperty (hInstall, "CUB_SYSTEM_READY", systemReady ? "1" : "0");
 
       bool wslInstalled = CheckWSLInstalled();
-      if (!wslInstalled) {
-	wslInstalled = CheckWSLServiceExists();
-      }
+      if (!wslInstalled)
+	{
+	  wslInstalled = CheckWSLServiceExists();
+	}
       SetMsiProperty (hInstall, "CUB_WSL_INSTALLED", wslInstalled ? "1" : "0");
       if (wslInstalled)
 	{
@@ -475,9 +487,10 @@ UINT EnvironmentUtil::RunAllEnvironmentChecks (MSIHANDLE hInstall)
 
       pSvc->Release();
       pLoc->Release();
-      if (comInitialized) {
-	CoUninitialize();
-      }
+      if (comInitialized)
+	{
+	  CoUninitialize();
+	}
 
       return ERROR_SUCCESS;
 

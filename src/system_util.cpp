@@ -178,16 +178,18 @@ void SystemUtil::BlockChildConsoleInput (DWORD pid)
 
 const std::string &SystemUtil::GetSystemDir()
 {
-  static const std::string dir = []() {
+  static const std::string dir = []()
+  {
     char buf[MAX_PATH];
     UINT n = GetSystemDirectoryA (buf, MAX_PATH);
     return (n > 0 && n < MAX_PATH) ? std::string (buf) : std::string ("C:\\Windows\\System32");
-  }();
+  }
+  ();
   return dir;
 }
 
 SystemUtil::CommandResult SystemUtil::RunProcessWithTimeout (const std::string &command, DWORD timeoutMs,
-							    bool captureOutput)
+    bool captureOutput)
 {
   CommandResult res;
 
@@ -255,11 +257,11 @@ SystemUtil::CommandResult SystemUtil::RunProcessWithTimeout (const std::string &
   if (hJob)
     {
       if (!AssignProcessToJobObject (hJob, pi.hProcess))
-        {
-          logger.LogWarning ("AssignProcessToJobObject failed: "+ std::to_string (GetLastError ()));	
-          CloseHandle (hJob);
-          hJob = NULL;
-        }
+	{
+	  logger.LogWarning ("AssignProcessToJobObject failed: "+ std::to_string (GetLastError ()));
+	  CloseHandle (hJob);
+	  hJob = NULL;
+	}
     }
   ResumeThread (pi.hThread);
   res.launched = true;
@@ -451,7 +453,7 @@ bool SystemUtil::SetRegistryValueString (const HKEY rootKey, const std::string &
 }
 
 bool SystemUtil::DeleteRegistryValue (const HKEY rootKey, const std::string &keyPath,
-                                      const std::string &valueName)
+				      const std::string &valueName)
 {
   HKEY hKey;
   LONG result = RegOpenKeyExA (rootKey, keyPath.c_str(), 0, KEY_WRITE, &hKey);

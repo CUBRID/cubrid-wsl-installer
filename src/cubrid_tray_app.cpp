@@ -39,7 +39,7 @@ static std::atomic<bool> startEndServiceRunning_ {false};
 
 TrayApp::TrayApp() : hWnd (NULL), hIcon (NULL)
 {
-  appRunning_.store(false);
+  appRunning_.store (false);
 }
 
 TrayApp::~TrayApp()
@@ -149,7 +149,7 @@ CUBRIDErrorCode TrayApp::Initialize()
 void TrayApp::Run()
 {
   Logger::GetInstance().LogInfo ("Starting Tray application...");
-  appRunning_.store(true);
+  appRunning_.store (true);
 
   std::thread monitorThread (&TrayApp::MonitorCUBRIDStatus, this);
 
@@ -180,7 +180,7 @@ void TrayApp::Shutdown()
       hWnd = NULL;
     }
 
-  appRunning_.store(false);
+  appRunning_.store (false);
 }
 
 bool TrayApp::AddTrayIcon()

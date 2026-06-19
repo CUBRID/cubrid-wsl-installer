@@ -32,93 +32,93 @@ static const char *STARTUP_RUN_VALUE_NAME = "CUBRID_WSL_TrayApp";
 
 namespace
 {
-constexpr int RPS_LAUNCH_FAILED = -1;
-constexpr int RPS_TIMEOUT       = -2;
+  constexpr int RPS_LAUNCH_FAILED = -1;
+  constexpr int RPS_TIMEOUT       = -2;
 
-int RunPowerShellScript (const std::string &tag, const std::string &scriptBody,
-                         DWORD timeoutMs, const char *errorActionPreference, bool showWindow)
-{
-  const char *tempEnv = std::getenv ("TEMP");
-  const std::string tempDir = tempEnv ? tempEnv : ".";
-  const std::string psLogPath = tempDir + "\\cubrid_ps_" + tag + ".log";
-  const std::string tempScriptPath = tempDir + "\\cubrid_ps_" + tag + ".ps1";
-
-  std::string psScript;
-  psScript += std::string ("$ErrorActionPreference = '") + errorActionPreference + "'; ";
-  psScript += "try { [Console]::TreatControlCAsInput = $true } catch {}; ";
-  psScript += "trap [System.Management.Automation.PipelineStoppedException] { continue }; ";
-  psScript += "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; ";
-  psScript += "Start-Transcript -Path '" + psLogPath + "' -Force; ";
-  psScript += scriptBody;
-  psScript += " Stop-Transcript; ";
-
+  int RunPowerShellScript (const std::string &tag, const std::string &scriptBody,
+			   DWORD timeoutMs, const char *errorActionPreference, bool showWindow)
   {
-    std::ofstream scriptFile (tempScriptPath);
-    scriptFile << psScript;
+    const char *tempEnv = std::getenv ("TEMP");
+    const std::string tempDir = tempEnv ? tempEnv : ".";
+    const std::string psLogPath = tempDir + "\\cubrid_ps_" + tag + ".log";
+    const std::string tempScriptPath = tempDir + "\\cubrid_ps_" + tag + ".ps1";
+
+    std::string psScript;
+    psScript += std::string ("$ErrorActionPreference = '") + errorActionPreference + "'; ";
+    psScript += "try { [Console]::TreatControlCAsInput = $true } catch {}; ";
+    psScript += "trap [System.Management.Automation.PipelineStoppedException] { continue }; ";
+    psScript += "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; ";
+    psScript += "Start-Transcript -Path '" + psLogPath + "' -Force; ";
+    psScript += scriptBody;
+    psScript += " Stop-Transcript; ";
+
+    {
+      std::ofstream scriptFile (tempScriptPath);
+      scriptFile << psScript;
+    }
+
+    std::string command = "powershell.exe -ExecutionPolicy Bypass -File \"" + tempScriptPath + "\"";
+
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
+    ZeroMemory (&si, sizeof (si));
+    si.cb = sizeof (si);
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = showWindow ? SW_SHOW : SW_HIDE;
+    ZeroMemory (&pi, sizeof (pi));
+
+    if (!CreateProcessA (NULL, command.data(), NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL,
+			 SystemUtil::GetSystemDir().data(), &si, &pi))
+      {
+	logger.LogError ("Failed to start PowerShell process [" + tag + "]. Error: "
+			 + std::to_string (GetLastError()));
+	return RPS_LAUNCH_FAILED;
+      }
+    SystemUtil::BlockChildConsoleInput (pi.dwProcessId);
+
+    DWORD waitResult = WaitForSingleObject (pi.hProcess, timeoutMs == 0 ? INFINITE : timeoutMs);
+    if (waitResult == WAIT_TIMEOUT)
+      {
+	logger.LogError ("PowerShell process [" + tag + "] timed out after "
+			 + std::to_string (timeoutMs) + " ms. Terminating.");
+	SystemUtil::ExecuteCommandWithoutResult ("taskkill /F /T /PID " + std::to_string (pi.dwProcessId));
+	TerminateProcess (pi.hProcess, 1);
+	WaitForSingleObject (pi.hProcess, 5000);
+	CloseHandle (pi.hProcess);
+	CloseHandle (pi.hThread);
+	DeleteFileA (tempScriptPath.c_str());
+	return RPS_TIMEOUT;
+      }
+
+    DWORD exitCode = 0;
+    GetExitCodeProcess (pi.hProcess, &exitCode);
+    CloseHandle (pi.hProcess);
+    CloseHandle (pi.hThread);
+    DeleteFileA (tempScriptPath.c_str());
+
+    std::ifstream logFile (psLogPath);
+    if (logFile.is_open())
+      {
+	std::string line;
+	logger.LogInfo ("--- PowerShell [" + tag + "] Output Begin ---");
+	while (std::getline (logFile, line))
+	  {
+	    logger.LogInfo (line);
+	  }
+	logger.LogInfo ("--- PowerShell [" + tag + "] Output End ---");
+	logFile.close();
+	DeleteFileA (psLogPath.c_str());
+      }
+
+    return (int) exitCode;
   }
 
-  std::string command = "powershell.exe -ExecutionPolicy Bypass -File \"" + tempScriptPath + "\"";
-
-  STARTUPINFOA si;
-  PROCESS_INFORMATION pi;
-  ZeroMemory (&si, sizeof (si));
-  si.cb = sizeof (si);
-  si.dwFlags = STARTF_USESHOWWINDOW;
-  si.wShowWindow = showWindow ? SW_SHOW : SW_HIDE;
-  ZeroMemory (&pi, sizeof (pi));
-
-  if (!CreateProcessA (NULL, command.data(), NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL,
-                       SystemUtil::GetSystemDir().data(), &si, &pi))
-    {
-      logger.LogError ("Failed to start PowerShell process [" + tag + "]. Error: "
-                       + std::to_string (GetLastError()));
-      return RPS_LAUNCH_FAILED;
-    }
-  SystemUtil::BlockChildConsoleInput (pi.dwProcessId);
-
-  DWORD waitResult = WaitForSingleObject (pi.hProcess, timeoutMs == 0 ? INFINITE : timeoutMs);
-  if (waitResult == WAIT_TIMEOUT)
-    {
-      logger.LogError ("PowerShell process [" + tag + "] timed out after "
-                       + std::to_string (timeoutMs) + " ms. Terminating.");
-      SystemUtil::ExecuteCommandWithoutResult ("taskkill /F /T /PID " + std::to_string (pi.dwProcessId));
-      TerminateProcess (pi.hProcess, 1);
-      WaitForSingleObject (pi.hProcess, 5000);
-      CloseHandle (pi.hProcess);
-      CloseHandle (pi.hThread);
-      DeleteFileA (tempScriptPath.c_str());
-      return RPS_TIMEOUT;
-    }
-
-  DWORD exitCode = 0;
-  GetExitCodeProcess (pi.hProcess, &exitCode);
-  CloseHandle (pi.hProcess);
-  CloseHandle (pi.hThread);
-  DeleteFileA (tempScriptPath.c_str());
-
-  std::ifstream logFile (psLogPath);
-  if (logFile.is_open())
-    {
-      std::string line;
-      logger.LogInfo ("--- PowerShell [" + tag + "] Output Begin ---");
-      while (std::getline (logFile, line))
-        {
-          logger.LogInfo (line);
-        }
-      logger.LogInfo ("--- PowerShell [" + tag + "] Output End ---");
-      logFile.close();
-      DeleteFileA (psLogPath.c_str());
-    }
-
-  return (int) exitCode;
-}
-
-std::string GetImportMarkerPath (const std::string &wslName)
-{
-  const char *tempEnv = std::getenv ("TEMP");
-  const std::string tempDir = tempEnv ? tempEnv : ".";
-  return tempDir + "\\cubrid_wsl_import_" + wslName + ".marker";
-}
+  std::string GetImportMarkerPath (const std::string &wslName)
+  {
+    const char *tempEnv = std::getenv ("TEMP");
+    const std::string tempDir = tempEnv ? tempEnv : ".";
+    return tempDir + "\\cubrid_wsl_import_" + wslName + ".marker";
+  }
 } // namespace
 
 CUBRIDInstaller::CUBRIDInstaller()
@@ -364,7 +364,7 @@ bool CUBRIDInstaller::RegisterTrayApp (const std::string &trayAppPath)
 
   std::string regValue = "\"" + trayAppPath + "\"";
   if (SystemUtil::SetRegistryValueString (HKEY_CURRENT_USER, START_UP_REGISTRY_KEY_PATH,
-                                          STARTUP_RUN_VALUE_NAME, regValue))
+					  STARTUP_RUN_VALUE_NAME, regValue))
     {
       logger.LogInfo ("Successfully registered tray application to Windows Startup: " + regValue);
       return true;
@@ -379,7 +379,7 @@ bool CUBRIDInstaller::UnregisterTrayApp()
   logger.LogInfo ("Unregistering Tray Application from Windows Startup");
 
   if (SystemUtil::DeleteRegistryValue (HKEY_CURRENT_USER, START_UP_REGISTRY_KEY_PATH,
-                                       STARTUP_RUN_VALUE_NAME))
+				       STARTUP_RUN_VALUE_NAME))
     {
       logger.LogInfo ("Successfully unregistered tray application from Windows Startup");
       return true;

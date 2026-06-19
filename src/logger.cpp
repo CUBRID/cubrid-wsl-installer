@@ -38,7 +38,7 @@ bool Logger::Initialize()
       if (GetModuleFileNameA (NULL, exePath, MAX_PATH) != 0)
 	{
 	  std::filesystem::path marker =
-	    std::filesystem::path (exePath).parent_path() / "_debug_cubrid";
+		  std::filesystem::path (exePath).parent_path() / "_debug_cubrid";
 	  shouldLog = std::filesystem::exists (marker);
 	}
     }
