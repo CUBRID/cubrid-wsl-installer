@@ -568,7 +568,7 @@ void CUBRIDInstaller::CreateDemodbWorker (std::string wslName, std::string scrip
       DWORD waitResult = WaitForSingleObject (pi.hProcess, CREATE_DEMODB_TIMEOUT_MS);
       if (waitResult == WAIT_TIMEOUT)
 	{
-	  logger.LogError ("Demodb creation timed out after 10 minutes. Terminating WSL process.");
+	  logger.LogError ("Demodb creation timed out after 5 minutes. Terminating WSL process.");
 	  TerminateProcess (pi.hProcess, 1);
 	  WaitForSingleObject (pi.hProcess, 5000);
 	  exitCode = 1;

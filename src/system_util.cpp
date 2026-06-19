@@ -141,7 +141,7 @@ namespace
     ZeroMemory (&tk, sizeof (tk));
 
     std::string mutableCmd = cmd;
-    if (CreateProcessA (NULL, (LPSTR) mutableCmd.c_str(), NULL, NULL, FALSE,
+    if (CreateProcessA (NULL, mutableCmd.data(), NULL, NULL, FALSE,
 			CREATE_NO_WINDOW, NULL, NULL, &si, &tk))
       {
 	WaitForSingleObject (tk.hProcess, 5000);
@@ -233,7 +233,7 @@ SystemUtil::CommandResult SystemUtil::RunProcessWithTimeout (const std::string &
   ZeroMemory (&pi, sizeof (pi));
 
   std::string mutableCmd = command;
-  if (!CreateProcessA (NULL, (LPSTR) mutableCmd.c_str(), NULL, NULL,
+  if (!CreateProcessA (NULL, mutableCmd.data(), NULL, NULL,
 		       captureOutput ? TRUE : FALSE,
 		       CREATE_NO_WINDOW | CREATE_SUSPENDED, NULL, NULL, &si, &pi))
     {
@@ -460,7 +460,6 @@ bool SystemUtil::DeleteRegistryValue (const HKEY rootKey, const std::string &key
 
   result = RegDeleteValueA (hKey, valueName.c_str());
   RegCloseKey (hKey);
-  // Treat "value not present" as success (idempotent removal; needed for uninstall).
   return result == ERROR_SUCCESS || result == ERROR_FILE_NOT_FOUND;
 }
 

@@ -646,7 +646,10 @@ static std::string PrepareDemodbScript()
 	    "exit 0\n";
 
     char tempPath[MAX_PATH];
-    GetTempPathA (MAX_PATH, tempPath);
+    if (GetTempPathA (MAX_PATH, tempPath) == 0) {
+	logger.LogError("Failed to get temp path. Error: " + std::to_string(GetLastError()));
+    	return "";
+    }
     std::string scriptPath = std::string (tempPath) + "create_demodb.sh";
 
     std::ofstream scriptFile (scriptPath, std::ios::binary);
