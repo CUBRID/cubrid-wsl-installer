@@ -58,16 +58,94 @@
         border-radius: 3px; 
         font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
     }
-    pre { 
-        background-color: #161b22; 
-        padding: 16px; 
-        overflow: auto; 
-        border-radius: 6px; 
+    pre {
+        position: relative;          /* anchor for the copy button */
+        background-color: #161b22;
+        padding: 16px;
+        overflow-x: auto;            /* long lines scroll inside the block */
+        max-width: 100%;
+        border-radius: 6px;
         border: 1px solid #30363d;
     }
+    /* Pandoc wraps highlighted code in <div class="sourceCode">; constrain it
+       too so long lines never push past the page width. */
+    div.sourceCode { overflow-x: auto; max-width: 100%; }
+    /* Code inside a <pre> must not reuse the inline-code chip styling. */
+    pre code, pre code.sourceCode {
+        background-color: transparent;
+        padding: 0;
+        border-radius: 0;
+        white-space: pre;
+    }
+
+    /* Copy button injected into every code block (see script below). */
+    .copy-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        z-index: 1;
+        font-size: 12px;
+        line-height: 1;
+        padding: 4px 8px;
+        color: #c9d1d9;
+        background-color: #21262d;
+        border: 1px solid #30363d;
+        border-radius: 4px;
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 0.15s;
+    }
+    pre:hover .copy-btn, .copy-btn:focus { opacity: 1; }
+    .copy-btn:hover { background-color: #30363d; }
 
     /* Table style (added) */
     table { border-collapse: collapse; margin: 1em 0; }
     th, td { border: 1px solid #30363d; padding: 8px; }
     th { background-color: #21262d; }
 </style>
+<script>
+    // Add a "Copy" button to every code block (```bash / ```powershell / ...).
+    // Works when the guide is opened locally (file://): falls back to
+    // execCommand("copy") when the async Clipboard API is unavailable.
+    document.addEventListener("DOMContentLoaded", function () {
+        var pres = document.querySelectorAll("pre");
+        for (var i = 0; i < pres.length; i++) {
+            (function (pre) {
+                var codeEl = pre.querySelector("code");
+                // Capture the code text now, BEFORE the button is added, so the
+                // button label never ends up in the copied text.
+                var text = (codeEl ? codeEl.innerText : pre.innerText).replace(/\s+$/, "");
+
+                var btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "copy-btn";
+                btn.textContent = "Copy";
+
+                btn.addEventListener("click", function () {
+                    var done = function () {
+                        btn.textContent = "Copied!";
+                        setTimeout(function () { btn.textContent = "Copy"; }, 1500);
+                    };
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text).then(done, function () { fallback(); });
+                    } else {
+                        fallback();
+                    }
+                    function fallback() {
+                        var ta = document.createElement("textarea");
+                        ta.value = text;
+                        ta.style.position = "fixed";
+                        ta.style.opacity = "0";
+                        document.body.appendChild(ta);
+                        ta.focus();
+                        ta.select();
+                        try { document.execCommand("copy"); done(); } catch (e) { /* ignore */ }
+                        document.body.removeChild(ta);
+                    }
+                });
+
+                pre.appendChild(btn);
+            })(pres[i]);
+        }
+    });
+</script>

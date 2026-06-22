@@ -5,9 +5,9 @@
 본 문서는 WSL2의 네트워크 작동 모드 세 가지(NAT, Mirror, Bridge)의 설정 방법을 설명합니다.
 
 ### **주의사항**
-* 설정을 변경하기 전, 관리자 권한 PowerShell에서 'wsl --shutdown'을 실행하여 WSL을 모두 종료해야 합니다.
-* 주요 설정 파일은 사용자 홈 디렉터리(예: 'C:\Users\사용자이름\')의 '.wslconfig' 파일입니다.
-* '.wslconfig'에서 변경된 네트워크 모드는 설치된 모든 배포판에 적용됩니다.
+* 설정을 변경하기 전, 관리자 권한 PowerShell에서 `wsl --shutdown`을 실행하여 WSL을 모두 종료해야 합니다.
+* 주요 설정 파일은 사용자 홈 디렉터리(예: `C:\Users\사용자이름\`)의 `.wslconfig` 파일입니다.
+* `.wslconfig`에서 변경된 네트워크 모드는 설치된 모든 배포판에 적용됩니다.
 
 ---
 
@@ -66,7 +66,7 @@ Windows 호스트와 동일한 네트워크 인터페이스를 공유하며 동�
     ```powershell
     wsl --shutdown
     ```
-2.  사용자 홈 디렉터리에서 '.wslconfig' 파일을 열거나 새로 생성합니다.
+2.  사용자 홈 디렉터리에서 `.wslconfig` 파일을 열거나 새로 생성합니다.
 3.  파일에 다음 내용을 추가하고 저장합니다:
     ```ini
     [wsl2]
@@ -91,13 +91,13 @@ WSL2가 가상 스위치를 통해 물리 네트워크에 직접 연결되어 �
   ```powershell
   # 수동 활성화
   Get-ChildItem -Path "$env:SystemRoot\servicing\Packages\*Hyper-V*.mum" | ForEach-Object { Dism /online /norestart /add-package:"$($_.FullName)" }
-  # 리부팅
+  # 재부팅
   Restart-Computer
   ```
 
 **설정 방법:**
 
-1.  **가상 스위치 생성**: Hyper-V 관리자(Windows 기능 활성화 필요)에서 '외부(External)' 가상 스위치를 생성하고 실제 네트워크 어댑터에 연결합니다.
+1.  **가상 스위치 생성**: Hyper-V 관리자(Windows 기능 활성화 필요)에서 `외부(External)` 가상 스위치를 생성하고 실제 네트워크 어댑터에 연결합니다.
     * 물리적 가상 스위치 확인
     ```powershell
     Get-VMSwitch | Where-Object { $_.SwitchType -eq "External" }
