@@ -13,18 +13,22 @@
     body {
         /* Layout: replaced Grid with margin-based spacing */
         margin: 0;
-        margin-left: 270px; /* TOC width (250px) + gutter (20px) */
+        margin-left: 270px;
+        /* TOC width (250px) + gutter (20px) */
         padding: 20px;
         max-width: 900px;
-        min-height: 100vh;  /* Avoid white strip under short documents */
-        
+        min-height: 100vh;
+        /* Avoid white strip under short documents */
+
         /* Font & Base Style */
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
         line-height: 1.6;
 
         /* Dark Mode: background and text */
-        background-color: #0d1117; /* GitHub Dark Dimmed background color */
-        color: #c9d1d9;           /* Default text color */
+        background-color: #0d1117;
+        /* GitHub Dark Dimmed background color */
+        color: #c9d1d9;
+        /* Default text color */
     }
 
     #TOC {
@@ -33,45 +37,74 @@
         top: 0;
         left: 0;
         width: 250px;
-        height: 100vh; /* Full viewport height */
+        height: 100vh;
+        /* Full viewport height */
         overflow-y: auto;
-        
+
         /* Dark Mode: sidebar style */
         background-color: #161b22;
         border-right: 1px solid #30363d;
         padding: 20px;
-        box-sizing: border-box; /* Include padding in width calculation */
+        box-sizing: border-box;
+        /* Include padding in width calculation */
     }
 
-    #TOC ul { list-style: none; padding-left: 20px; }
-    #TOC > ul { padding-left: 0; }
-    
+    #TOC ul {
+        list-style: none;
+        padding-left: 20px;
+    }
+
+    #TOC>ul {
+        padding-left: 0;
+    }
+
     /* Dark Mode: link style */
-    a { text-decoration: none; color: #58a6ff; }
-    #TOC a { font-size: 14px; color: #8b949e; transition: color 0.2s; }
-    #TOC a:hover { text-decoration: underline; color: #58a6ff; }
-    
+    a {
+        text-decoration: none;
+        color: #58a6ff;
+    }
+
+    #TOC a {
+        font-size: 14px;
+        color: #8b949e;
+        transition: color 0.2s;
+    }
+
+    #TOC a:hover {
+        text-decoration: underline;
+        color: #58a6ff;
+    }
+
     /* Dark Mode: code block style */
-    code { 
-        background-color: #21262d; 
-        padding: 0.2em 0.4em; 
-        border-radius: 3px; 
+    code {
+        background-color: #21262d;
+        padding: 0.2em 0.4em;
+        border-radius: 3px;
         font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
     }
+
     pre {
-        position: relative;          /* anchor for the copy button */
+        position: relative;
+        /* anchor for the copy button */
         background-color: #161b22;
         padding: 16px;
-        overflow-x: auto;            /* long lines scroll inside the block */
+        overflow-x: auto;
+        /* long lines scroll inside the block */
         max-width: 100%;
         border-radius: 6px;
         border: 1px solid #30363d;
     }
+
     /* Pandoc wraps highlighted code in <div class="sourceCode">; constrain it
        too so long lines never push past the page width. */
-    div.sourceCode { overflow-x: auto; max-width: 100%; }
+    div.sourceCode {
+        overflow-x: auto;
+        max-width: 100%;
+    }
+
     /* Code inside a <pre> must not reuse the inline-code chip styling. */
-    pre code, pre code.sourceCode {
+    pre code,
+    pre code.sourceCode {
         background-color: transparent;
         padding: 0;
         border-radius: 0;
@@ -95,13 +128,38 @@
         opacity: 0;
         transition: opacity 0.15s;
     }
-    pre:hover .copy-btn, .copy-btn:focus { opacity: 1; }
-    .copy-btn:hover { background-color: #30363d; }
+
+    pre:hover .copy-btn,
+    .copy-btn:focus {
+        opacity: 1;
+    }
+
+    .copy-btn:hover {
+        background-color: #30363d;
+    }
 
     /* Table style (added) */
-    table { border-collapse: collapse; margin: 1em 0; }
-    th, td { border: 1px solid #30363d; padding: 8px; }
-    th { background-color: #21262d; }
+    table {
+        border-collapse: collapse;
+        margin: 1em 0;
+    }
+
+    th,
+    td {
+        border: 1px solid #30363d;
+        padding: 8px;
+    }
+
+    th {
+        background-color: #21262d;
+    }
+
+    blockquote {
+        margin: 1em 0;
+        padding: 0 1em;
+        color: #8b949e;
+        border-left: 0.25em solid #30363d;
+    }
 </style>
 <script>
     // Add a "Copy" button to every code block (```bash / ```powershell / ...).

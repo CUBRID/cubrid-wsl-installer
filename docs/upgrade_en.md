@@ -8,7 +8,7 @@ This document describes **how to upgrade a CUBRID server installed in WSL2 to a 
 * Always back up the configuration files (`cubrid.conf`, `cubrid_broker.conf`, `cm.conf`) and the database location file (`databases.txt`) before upgrading.
 * Database volumes are not guaranteed to be compatible across different **major versions**, so a migration with `unloaddb` / `loaddb` may be required.
 * All upgrade commands must be executed as the `cubrid` user inside WSL. From PowerShell, you can enter the WSL distro with:
-```powershell
+```command
 wsl -d CUBRID_For_WSL -u cubrid
 ```
 
@@ -33,7 +33,7 @@ Patch-level upgrades within the same major version (for example x.x.0 → x.x.1)
 
 Run the following commands in order, inside WSL.
 
-```bash
+```command
 cubrid service stop
 
 mkdir -p ~/cubrid_backup
@@ -51,7 +51,7 @@ Download the new patch release from the official site.
 
 * Download page: https://www.cubrid.org/downloads
 * To download directly from inside WSL (example):
-```bash
+```command
 wget https://ftp.cubrid.org/CUBRID_Engine/<version>/Linux/CUBRID-<version>-linux.x86_64.sh
 chmod +x CUBRID-<version>-linux.x86_64.sh
 ```
@@ -60,19 +60,19 @@ chmod +x CUBRID-<version>-linux.x86_64.sh
 
 Run the installer to overwrite the existing installation at `$CUBRID`.
 
-```bash
+```command
 ./CUBRID-<version>-linux.x86_64.sh
 ```
 
 When the installation finishes, verify that the new version has been applied with `cubrid_rel`.
 
-```bash
+```command
 cubrid_rel
 ```
 
 #### 1-4. Restore the backed-up configuration files
 
-```bash
+```command
 cp -a ~/cubrid_backup/conf/.       $CUBRID/conf/
 cp    ~/cubrid_backup/databases.txt $CUBRID_DATABASES/
 ```
@@ -81,7 +81,7 @@ cp    ~/cubrid_backup/databases.txt $CUBRID_DATABASES/
 
 #### 1-5. Start the service and verify
 
-```bash
+```command
 cubrid service start
 cubrid service status
 ```
@@ -98,7 +98,7 @@ For full details, refer to the **Database Migration → Recommended Scenario and
 https://www.cubrid.org/manuals
 
 > All commands must be run as the `cubrid` user inside WSL.
-> ```powershell
+> ```command
 > wsl -d CUBRID_For_WSL -u cubrid
 > ```
 
@@ -110,7 +110,7 @@ The following describes a migration scenario that can be applied while the exist
 
 Run `cubrid service stop` to terminate all service processes of the existing CUBRID, then verify that all CUBRID-related processes have ended properly.
 
-To check on Linux, run `ps -ef | grep cub_`; if no process starting with `cub_` remains, the shutdown completed normally. On Windows, press <Ctrl + Alt + Delete>, select [Start Task Manager], and verify that no process starting with `cub_` is listed under the [Processes] tab. If any CUBRID-related process still remains after the service stop, force-kill it (`kill` on Linux, or right-click the image name in Task Manager's [Processes] tab and choose [End Process] on Windows), then check and remove any shared memory the CUBRID broker was using with `ipcs -m` on Linux.
+To check on Linux, run `ps -ef | grep cub_`; if no process starting with `cub_` remains, the shutdown completed normally. On Windows, press <Ctrl + Alt + Delete>, select [Start Task Manager], and verify that no process starting with `cub_` is listed under the [Processes] tab. If any CUBRID-related process still remains after the service stop, force-kill it (`kill` on Linux, or right-click the image name in Task Manager`s [Processes] tab and choose [End Process] on Windows), then check and remove any shared memory the CUBRID broker was using with `ipcs -m` on Linux.
 
 #### 2-2 Back up the existing database
 
@@ -134,7 +134,7 @@ Using the configuration files preserved in **2-4** as a reference, set up the en
 
 #### 2-7 Load the new database
 
-Use the `cubrid createdb` utility to create the database, and then use the `cubrid loaddb` utility to load the previously unloaded data into that database. For details on database creation, see **createdb** in the "Administrator's Guide"; for details on database loading, see the **loaddb** section of the manual.
+Use the `cubrid createdb` utility to create the database, and then use the `cubrid loaddb` utility to load the previously unloaded data into that database. For details on database creation, see **createdb** in the "Administrator`s Guide"; for details on database loading, see the **loaddb** section of the manual.
 
 #### 2-8 Back up the new database
 
