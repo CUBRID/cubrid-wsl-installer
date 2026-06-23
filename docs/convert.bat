@@ -33,7 +33,7 @@ echo [INFO] Creating combined HTML documentation...
 "%PANDOC_DIR%" ^
     "%DOCS_DIR%network_ko.md" "%DOCS_DIR%network_en.md" ^
     "%DOCS_DIR%upgrade_ko.md" "%DOCS_DIR%upgrade_en.md" ^
-    -s -f markdown-smart -t html ^
+    -s -f markdown-smart+autolink_bare_uris -t html ^
     --toc --toc-depth=2 ^
     -H "%DOCS_DIR%style.html" ^
     -o "%DOCS_DIR%cubrid_guide.html"

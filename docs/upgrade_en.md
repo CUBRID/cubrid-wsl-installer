@@ -19,7 +19,7 @@ wsl -d CUBRID_For_WSL -u cubrid
 | Scenario | Example | Recommended approach |
 | :--- | :--- | :--- |
 | **Patch-level change only**  | x.x.0 → x.x.1   | Back up configuration files and overwrite with the new package |
-| **Minor / major version change** | x.3 → x.4, x.0 → y.0 | Migrate data with `unloaddb` / `loaddb` |
+| **major / Minor version change** | x.3 → x.4, x.0 → y.0 | Migrate data with `unloaddb` / `loaddb` |
 
 > **TIP**: You can check the exact CUBRID version currently installed by running `cubrid_rel` inside WSL.
 

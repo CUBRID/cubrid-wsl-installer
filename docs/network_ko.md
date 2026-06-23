@@ -109,7 +109,7 @@ WSL2가 가상 스위치를 통해 물리 네트워크에 직접 연결되어 �
           ```
           2. 스위치 생성 (`wsl_switch` - 생성할 스위치 이름, `이더넷 3` - 조회된 물리적 가상 스위치 Name)
           ```command
-          New-VMSwitch -Name `wsl_switch` -NetAdapterName `이더넷 3` -AllowManagement $true -ErrorAction Stop
+          New-VMSwitch -Name "wsl_switch" -NetAdapterName "이더넷 3" -AllowManagement $true -ErrorAction Stop
           ```
 
 2.  **`.wslconfig` 설정**:

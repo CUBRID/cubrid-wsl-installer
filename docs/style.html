@@ -16,7 +16,7 @@
         margin-left: 270px;
         /* TOC width (250px) + gutter (20px) */
         padding: 20px;
-        max-width: 900px;
+        max-width: 950px;
         min-height: 100vh;
         /* Avoid white strip under short documents */
 
@@ -58,13 +58,16 @@
         padding-left: 0;
     }
 
-    /* Dark Mode: link style */
-    a {
+    /* Dark Mode: link style (include :visited so accessed links stay visible
+       instead of falling back to the dark default visited color). */
+    a,
+    a:visited {
         text-decoration: none;
         color: #58a6ff;
     }
 
-    #TOC a {
+    #TOC a,
+    #TOC a:visited {
         font-size: 14px;
         color: #8b949e;
         transition: color 0.2s;

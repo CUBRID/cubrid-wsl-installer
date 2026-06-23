@@ -66,7 +66,7 @@ Shares the same network interface with the Windows host and uses the same IP add
     ```
 2.  Open or create the `.wslconfig` file in your user home directory.
 3.  Add the following content to the file and save:
-    ```ini
+    ```command
     [wsl2]
     networkingMode = mirrored
     ```
@@ -107,11 +107,11 @@ WSL2 connects directly to the physical network through a virtual switch and rece
           ```
           2. Create switch (`wsl_switch` - name for the switch to create, `Ethernet 3` - Name of the queried physical network adapter)
           ```command
-          New-VMSwitch -Name `wsl_switch` -NetAdapterName `Ethernet 3` -AllowManagement $true -ErrorAction Stop
+          New-VMSwitch -Name "wsl_switch" -NetAdapterName "Ethernet 3" -AllowManagement $true -ErrorAction Stop
           ```
 
 2.  **Configure `.wslconfig`**:
-    ```ini
+    ```command
     # Change to the name of the virtual switch you want to use (e.g., wsl_switch)
     [wsl2]
     vmSwitch = wsl_switch
