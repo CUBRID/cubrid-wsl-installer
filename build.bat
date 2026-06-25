@@ -131,20 +131,26 @@ if not exist "%OS_IMAGE_DIR%" (
 )
 
 if "%IMAGE_COPY_OPTION%"=="1" (
-    echo [INFO] Deleting install image...
-    if exist "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%" (
-        del "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%"
-        echo [INFO] %INSTALL_IMAGE_TAR_GZ_FILE% deleted.
+    if exist "%SHELL_DIR%make_image\targz_images\%COPY_IMAGE_TAR_GZ_FILE%" (
+        mv "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%" "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%".temp
+        echo [INFO] Copy local image...
+        copy "%SHELL_DIR%make_image\targz_images\%COPY_IMAGE_TAR_GZ_FILE%" "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%" >nul
+        if %errorLevel% neq 0 (
+            echo [ERROR] Image copy fail. Please check ["%SHELL_DIR%make_image\targz_images\%COPY_IMAGE_TAR_GZ_FILE%"]
+            echo [ERROR] If you do not need to copy the image, use the '-c 0' option. e.g.^) build.bat -c 0
+            mv "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%".temp "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%"
+            pause
+            exit /b 1
+        ) else (
+            del /f /q "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%".temp
+            echo [INFO] %COPY_IMAGE_TAR_GZ_FILE% copied.
+        )
+    ) else (
+        echo [ERROR] %SHELL_DIR%make_image\targz_images\%COPY_IMAGE_TAR_GZ_FILE% does not exists.
+        echo [ERROR] If you do not need to copy the image, use the '-c 0' option. e.g.^) build.bat -c 0
+        pause
+        exit /b 1
     )
-)
-
-if not exist "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%" (
-    echo [INFO] Copy local image...
-    copy "%SHELL_DIR%make_image\targz_images\%COPY_IMAGE_TAR_GZ_FILE%" "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%" >nul
-    echo [INFO] %COPY_IMAGE_TAR_GZ_FILE% copied.
-) else (
-    echo [INFO] %INSTALL_IMAGE_TAR_GZ_FILE% already exists.
-    echo [INFO] Skipping Install Image Copy.
 )
 
 echo [INFO] Creating build directory...
@@ -278,6 +284,13 @@ if %errorlevel% neq 0 goto :FAIL
 
 echo [INFO] Bundle build complete: %INSTALL_FILE_NAME%
 
+GOTO :EOF
+
+
+:OS_IMAGE_NOT_EXIST
+
+pause
+exit /b 1
 GOTO :EOF
 
 :USAGE
