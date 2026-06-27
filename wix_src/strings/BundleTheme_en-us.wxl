@@ -23,7 +23,7 @@
     
     <!-- Modify Page -->
     <String Id="ModifyHeader">Modify Setup</String>
-    <String Id="ModifyMessage">Please click the uninstall button to remove the installed app.</String>
+    <String Id="ModifyMessage">Uninstalling will also remove the installed WSL distributions, so please back them up if you need to continue using them.&#13;&#10;Please click the uninstall button to remove the installed app.</String>
     <String Id="ModifyUninstallButton">&amp;Uninstall</String>
     <String Id="ModifyCloseButton">&amp;Close</String>
     

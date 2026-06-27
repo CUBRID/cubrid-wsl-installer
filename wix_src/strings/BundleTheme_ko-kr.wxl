@@ -10,7 +10,7 @@
     <String Id="InstallMessage">CUBRID For WSL을 설치합니다.</String>
     <String Id="InstallDescription"> 본 프로그램은 Microsoft에서 제공하는 &lt;a href="https://github.com/microsoft/WSL"&gt;WSL(Windows Subsystem for Linux)&lt;/a&gt;환경에서 CUBRID가 설치된 배포판을 설치 합니다.&#13;&#10;설치 과정에서 WSL 실행 환경을 검증하고 CUBRID가 설치된 배포판 및 Tray 애플리케이션을 설치합니다.&#13;&#10;Tray 애플리케이션을 통해 CUBRID를 제어 할 수 있습니다.</String>
     <String Id="InstallVersion">버전 [WixBundleVersion]</String>
-    <String Id="ConfirmCancelMessage">설치를 취소하시겠습니까?</String>
+    <String Id="ConfirmCancelMessage">취소하시겠습니까?</String>
     
     <!-- Buttons -->
     <String Id="InstallInstallButton">설치(&amp;I)</String>
@@ -24,7 +24,7 @@
     
     <!-- Modify Page -->
     <String Id="ModifyHeader">제거 안내</String>
-    <String Id="ModifyMessage">설치된 앱을 제거 하시려면 제거 버튼을 클릭해주세요.</String>
+    <String Id="ModifyMessage">제거시 설치된 WSL 배포판도 삭제되므로 계속 사용이 필요 할 경우 WSL 배포판을 백업하세요.&#13;&#10;설치된 앱을 제거 하시려면 제거 버튼을 클릭해주세요.</String>
     <String Id="ModifyUninstallButton">제거(&amp;U)</String>
     <String Id="ModifyCloseButton">닫기(&amp;C)</String>
     
