@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" 
+     xmlns:bal="http://schemas.microsoft.com/wix/BalExtension"
+     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+    
+    <Bundle Name="CUBRID For WSL" 
+            Version="1.0.0" 
+            Manufacturer="CUBRID" 
+            UpgradeCode="{B8A5F3E1-2C4D-4F9A-8E7B-6A5C9D3E2F1A}"
+            IconSourceFile="$(var.ProjectDir)resources\cubrid_icon.ico"
+            DisableModify="yes"
+            DisableRemove="no">
+
+        <util:ProductSearch Id="CheckMsiInstalled" 
+                    ProductCode="{279d7d8d-d2b2-4644-b02c-e9e3ca8dd8bc}" 
+                    Result="version" 
+                    Variable="MsiInstalledVersion" />
+
+        <bal:Condition Message="#(loc.FailureAlreadyInstalled)">
+            WixBundleAction &lt;&gt; 5 OR NOT MsiInstalledVersion OR WixBundleInstalled
+        </bal:Condition>
+
+        <Log Disable="yes" />
+
+        <BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.HyperlinkLicense">
+            <bal:WixStandardBootstrapperApplication
+                LicenseUrl=""
+                LogoFile="$(var.ProjectDir)resources\cubrid_logo.png"
+                ThemeFile="$(var.ProjectDir)wix_src\BundleTheme.xml"
+                LocalizationFile="$(var.ProjectDir)wix_src\strings\BundleTheme_en-us.wxl" />
+            <Payload Name="1033\thm.wxl" SourceFile="$(var.ProjectDir)wix_src\strings\BundleTheme_en-us.wxl" />
+            <Payload Name="1042\thm.wxl" SourceFile="$(var.ProjectDir)wix_src\strings\BundleTheme_ko-kr.wxl" />
+        </BootstrapperApplicationRef>
+        
+        <WixVariable Id="WixStdBALanguageId" Value="0" Overridable="yes" />
+
+        <Variable Name="REG_TRAY_APP"         Type="numeric" Value="1" bal:Overridable="yes" />
+        <Variable Name="CREATE_SHORTCUT"      Type="numeric" Value="1" bal:Overridable="yes" />
+        <Variable Name="CREATE_DEMODB"        Type="numeric" Value="1" bal:Overridable="yes" />
+        <Variable Name="IS_WSL2_MODE"         Type="numeric" Value="1" bal:Overridable="yes" />
+        <Variable Name="START_TRAY_APP"       Type="numeric" Value="1" bal:Overridable="yes" />
+        <Variable Name="CUB_DEFAULT_WSL_NAME" Type="string"  Value="CUBRID-FOR-WSL" bal:Overridable="yes" />
+
+          <Chain>
+            <MsiPackage Id="CubridPackage" SourceFile="CUBRID_Base.msi"
+                        DisplayInternalUI="yes"
+                        Visible="yes"
+                        ForcePerMachine="yes"
+                        Permanent="no"
+                        Vital="yes">
+                <MsiProperty Name="TRANSFORMS" Value=":[WixStdBALanguageId]" />
+                <MsiProperty Name="BUNDLEPROVIDERKEY" Value="[WixBundleProviderKey]" />
+                <MsiProperty Name="ARPSYSTEMCOMPONENT" Value="1" />
+                <MsiProperty Name="REG_TRAY_APP" Value="[REG_TRAY_APP]" />
+                <MsiProperty Name="CREATE_SHORTCUT" Value="[CREATE_SHORTCUT]" />
+                <MsiProperty Name="CREATE_DEMODB" Value="[CREATE_DEMODB]" />
+                <MsiProperty Name="IS_WSL2_MODE" Value="[IS_WSL2_MODE]" />
+                <MsiProperty Name="START_TRAY_APP" Value="[START_TRAY_APP]" />
+                <MsiProperty Name="CUB_DEFAULT_WSL_NAME" Value="[CUB_DEFAULT_WSL_NAME]" />
+            </MsiPackage>
+        </Chain>
+    </Bundle>
+</Wix>

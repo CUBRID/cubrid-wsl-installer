@@ -1,0 +1,11 @@
+build/
+*.log
+log.txt
+os_image/
+*.tar.gz
+uninstall_log.txt
+cubrid_test.pfx
+test/__pycache__/
+test/scenario_result.txt
+test/scenario_detail.log
+

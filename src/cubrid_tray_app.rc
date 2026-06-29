@@ -1,0 +1,5 @@
+#include "resource.h"
+
+IDI_TRAY_ICON ICON "../../resources/cubrid_icon.ico"
+IDI_ICON_STOPPED ICON "../../resources/cubrid_icon_warning.ico"
+IDI_ICON_ERROR ICON "../../resources/cubrid_icon_error.ico"

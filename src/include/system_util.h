@@ -1,0 +1,45 @@
+#pragma once
+#include <string>
+#include <windows.h>
+#include <msi.h>
+#include <msiquery.h>
+
+class SystemUtil
+{
+  public:
+    struct CommandResult
+    {
+      bool        launched = false;
+      bool        timedOut = false;
+      DWORD       exitCode = (DWORD) -1;
+      std::string output;
+    };
+
+    static CommandResult RunProcessWithTimeout (const std::string &command, DWORD timeoutMs, bool captureOutput);
+
+    static std::string ExecuteCommandWithTimeout (const std::string &command, DWORD timeoutMs = 5000);
+    static bool ExecuteCommandWithoutResult (const std::string &command);
+    static bool ExecuteCommandWithoutResultWithTimeout (const std::string &command, DWORD timeoutMs = 10000);
+
+    static const std::string &GetSystemDir();
+
+    static bool CheckRegistryKeyExists (const HKEY rootKey, const std::string &keyPath);
+    static bool CheckRegistryValueExists (const HKEY rootKey, const std::string &keyPath, const std::string &valueName);
+    static bool GetRegistryValueString (const HKEY rootKey, const std::string &keyPath, const std::string &valueName,
+					std::string &outValue);
+    static bool SetRegistryValueString (const HKEY rootKey, const std::string &keyPath, const std::string &valueName,
+					const std::string &value);
+    static bool SetRegistryValueDWORD (const HKEY rootKey, const std::string &keyPath, const std::string &valueName,
+				       DWORD value);
+    static bool DeleteRegistryValue (const HKEY rootKey, const std::string &keyPath,
+				     const std::string &valueName);
+
+    static void KillProcessByName (const std::string &processName);
+    static bool CalculateDirectorySize (const std::string &dirPath, ULONGLONG &outSize);
+
+    static void BlockChildConsoleInput (DWORD pid);
+
+    static bool SetMsiProperty (MSIHANDLE hInstall, const std::string &propertyName, const std::string &value);
+    static std::string GetMsiProperty (MSIHANDLE hInstall, const std::string &propertyName);
+};
+

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization Culture="en-us" Language="1033" xmlns="http://schemas.microsoft.com/wix/2006/localization">    
+    <!-- Application Title -->
+    <String Id="Caption">[WixBundleName] Setup</String>
+    <String Id="Title">CUBRID For WSL Setup</String>
+    
+    <!-- Welcome/Install Page -->
+    <String Id="InstallHeader">Welcome to [WixBundleName] Setup</String>
+    <String Id="InstallMessage">This will install [WixBundleName] on your computer.</String>
+    <String Id="InstallDescription">This program installs a distribution with CUBRID on the &lt;a href="https://github.com/microsoft/WSL"&gt;WSL (Windows Subsystem for Linux)&lt;/a&gt; environment provided by Microsoft.&#13;&#10;During the installation process, it configures and verifies the WSL execution environment and installs the distribution with CUBRID and the Tray Application.&#13;&#10;You can control CUBRID through the Tray Application.</String>
+    <String Id="InstallVersion">Version [WixBundleVersion]</String>
+    <String Id="ConfirmCancelMessage">Are you sure you want to cancel?</String>
+    
+    <!-- Buttons -->
+    <String Id="InstallInstallButton">&amp;Install</String>
+    <String Id="InstallCloseButton">&amp;Close</String>
+    
+    <!-- Progress Page -->
+    <String Id="ProgressHeader">In Progress</String>
+    <String Id="ProgressLabel">in progress...</String>
+    <String Id="OverallProgressPackageText">Initializing: [WixBundleName]</String>
+    <String Id="ProgressCancelButton">&amp;Cancel</String>
+    
+    <!-- Modify Page -->
+    <String Id="ModifyHeader">Modify Setup</String>
+    <String Id="ModifyMessage">Uninstalling will also remove the installed WSL distributions, so please back them up if you need to continue using them.&#13;&#10;Please click the uninstall button to remove the installed app.</String>
+    <String Id="ModifyUninstallButton">&amp;Uninstall</String>
+    <String Id="ModifyCloseButton">&amp;Close</String>
+    
+    <!-- Success Page -->
+    <String Id="SuccessHeader">Successful</String>
+    <String Id="SuccessInstallHeader">Installation Complete</String>
+    <String Id="SuccessRepairHeader">Repair Complete</String>
+    <String Id="SuccessUninstallHeader">Uninstall Complete</String>
+    <String Id="SuccessMessage">Setup completed successfully.</String>
+    <String Id="SuccessRepairMessage">Repair completed successfully.</String>
+    <String Id="SuccessUninstallMessage">Uninstall completed successfully.</String>
+    <String Id="SuccessRestartText">You must restart your computer before changes will take effect.</String>
+    <String Id="SuccessLaunchButton">&amp;Launch</String>
+    <String Id="SuccessRestartButton">&amp;Restart</String>
+    <String Id="SuccessCloseButton">&amp;Close</String>
+    
+    <!-- Failure Page -->
+    <String Id="FailureHeader">Setup Failed</String>
+    <String Id="FailureInstallHeader">Installation Failed</String>
+    <String Id="FailureUninstallHeader">Uninstall Failed</String>
+    <String Id="FailureRepairHeader">Repair Failed</String>
+    <String Id="FailureMessage">Setup failed to complete.</String>
+    <String Id="FailureHyperlinkLogText">For more information see &lt;a href="#"&gt;log file&lt;/a&gt;.</String>
+    <String Id="FailureRestartText">You must restart your computer to rollback changes.</String>
+    <String Id="FailureRestartButton">&amp;Restart</String>
+    <String Id="FailureCloseButton">&amp;Close</String>
+    <String Id="FailureAlreadyInstalled">A version of this application is already installed. Upgrade/duplicate installation is not supported.&#13;&#10;Please uninstall it from Settings (Apps-Installed Apps) first.</String>
+    
+</WixLocalization>
+

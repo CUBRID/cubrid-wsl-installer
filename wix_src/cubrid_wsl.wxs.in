@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="279d7d8d-d2b2-4644-b02c-e9e3ca8dd8bc" Name="CUBRID For WSL" Language="1033" Version="1.0.0" Manufacturer="CUBRID" UpgradeCode="{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}" Codepage="65001">
+    <Package InstallerVersion="200" Compressed="yes" InstallScope="perUser" Platform="x64" />
+
+    <Condition Message="This application requires administrator privileges to install WSL2 and configure system features. Please run as administrator.">
+        <![CDATA[Privileged]]>
+    </Condition>
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <Media Id="1" Cabinet="media1.cab" EmbedCab="yes" />
+    <Feature Id="ProductFeature" Title="CUBRID WSL" Level="1">
+      <ComponentRef Id="DummyComponent" />
+      <ComponentRef Id="CubridImageFileComponent" />
+      <ComponentRef Id="TrayAppComponent" />
+      <ComponentRef Id="CubridStarterComponent" />
+      <ComponentRef Id="NetworkGuideComponent" />
+    </Feature>
+
+    <Property Id="DefaultUIFont" Value="WixUI_Font_Normal" />
+    <Property Id="CUB_WSL_IMAGE_FILE" Value="@CUB_WSL_IMAGE_FILE@" />
+    <Property Id="CUB_WSL_EXTRACT_IMAGE_FILE" Value="@CUB_WSL_EXTRACT_IMAGE_FILE@" />
+    <Property Id="CUB_TRAY_APP_FILE" Value="@CUB_TRAY_APP_FILE@" />
+    <Property Id="CUB_TRAY_APP_LINK_FILE" Value="@CUB_TRAY_APP_LINK_FILE@" />
+    <Property Id="CUB_STARTER_APP_FILE" Value="@CUB_STARTER_APP_FILE@" />
+    <Property Id="CUB_GUIDE_FILE" Value="@CUB_GUIDE_FILE@" />
+    <Property Id="ARPSIZE" Value="0" />
+
+    <UIRef Id="CUBRIDWSLUI" />
+    <UIRef Id="WixUI_Common" />
+    <Icon Id="icon.ico" SourceFile="..\resources\cubrid_icon.ico" />
+
+    <WixVariable Id="WixUIBannerBmp" Value="..\resources\WixUIBannerBmp.bmp" />
+    <WixVariable Id="WixUIDialogBmp" Value="..\resources\WixUIDialogBmp.bmp" />
+
+    <Property Id="LicenseFile" Value="..\resources\license.txt" />
+
+    <Property Id="START_TRAY_APP" Value="1" />
+    <Property Id="CREATE_SHORTCUT" Value="1" />
+    <Property Id="CREATE_DEMODB" Value="1" />
+    <Property Id="REG_TRAY_APP" Value="1" />
+    <Property Id="IS_WSL2_MODE" Value="1" />
+
+    <Property Id="CUB_WSL_INSTALLED" Value="0" />
+    <Property Id="CUB_WSL_REBOOT_REQUIRED" Value="0" />
+    <Property Id="CUB_INSTALL_FAILURE_REASON" Value="NONE_ERROR" />
+
+    <Property Id="CUB_ENVIRONMENT_CHECK_COMPLETED" Value="0" />
+    <Property Id="CUB_ADMIN_RIGHTS_GRANTED" Value="0" />
+    <Property Id="CUB_ADMIN_RIGHTS_STATUS_TEXT" Value="Checking administrator rights..." />
+    <Property Id="CUB_ENVIRONMENT_CHECK_RESULT_JSON" Value="{}" />
+    <Property Id="CUB_INSTALL_PROGRESS_OUTPUT" Value="Preparing installation..." />
+    <Property Id="CUB_DEFAULT_WSL_NAME" Value="CUBRID-FOR-WSL">
+        <RegistrySearch Id="RS_CUB_DEFAULT_WSL_NAME" Root="HKCU" Key="@CUB_REGISTRY_KEY_PATH@" Name="@CUB_REG_VAL_WSL_NAME@" Type="raw" />
+    </Property>
+
+    <Property Id="INSTALLFOLDER">
+        <RegistrySearch Id="RS_INSTALLFOLDER" Root="HKCU" Key="@CUB_REGISTRY_KEY_PATH@" Name="@CUB_REG_VAL_INSTALL_DIR@" Type="raw" />
+    </Property>
+
+    <Property Id="CURRENT_USER_DESKTOP">
+        <RegistrySearch Id="RS_CURRENT_USER_DESKTOP" Root="HKCU" Key="Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" Name="Desktop" Type="raw" />
+    </Property>
+
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="LocalAppDataFolder">
+        <Directory Id="INSTALLFOLDER" Name="CUBRID-FOR-WSL">
+          <Component Id="DummyComponent" Guid="{7D14A7D8-7281-4A59-8393-279A83333C3C}">
+            <CreateFolder />
+            <RemoveFolder Id="RemoveINSTALLFOLDER" On="uninstall" />
+            <RemoveRegistryKey Root="HKCU" Key="@CUB_REGISTRY_KEY_PATH@" Action="removeOnUninstall" />
+            <RegistryValue Root="HKCU" Key="@CUB_REGISTRY_KEY_PATH@" Name="@CUB_REG_VAL_INSTALLED@" Type="integer" Value="1" KeyPath="yes" />
+            <RegistryValue Root="HKCU" Key="@CUB_REGISTRY_KEY_PATH@" Name="@CUB_REG_VAL_WSL_NAME@" Type="string" Value="[CUB_DEFAULT_WSL_NAME]" />
+            <RegistryValue Root="HKCU" Key="@CUB_REGISTRY_KEY_PATH@" Name="@CUB_REG_VAL_INSTALL_DIR@" Type="string" Value="[INSTALLFOLDER]" />
+            <RegistryValue Root="HKCU" Key="@CUB_REGISTRY_KEY_PATH@" Name="@CUB_REG_VAL_IMAGE_FILE@" Type="string" Value="[CUB_WSL_IMAGE_FILE]" />
+            <RegistryValue Root="HKCU" Key="@CUB_REGISTRY_KEY_PATH@" Name="@CUB_REG_VAL_TRAY_APP_FILE@" Type="string" Value="[CUB_TRAY_APP_FILE]" />
+            <RegistryValue Root="HKCU" Key="@CUB_REGISTRY_KEY_PATH@" Name="@CUB_REG_VAL_TRAY_APP_LINK_FILE@" Type="string" Value="[CUB_TRAY_APP_LINK_FILE]" />
+            <RegistryValue Root="HKCU" Key="@CUB_REGISTRY_KEY_PATH@" Name="@CUB_REG_VAL_USERS_DESKTOP_FOLDER@" Type="string" Value="[CURRENT_USER_DESKTOP]" />
+          </Component>
+          <Component Id="CubridImageFileComponent" Guid="{A2B3C4D5-E6F7-8901-ABCD-EF1234567890}" Transitive="yes">
+            <File Id="CubridImageFile" Source="..\os_image\@CUB_WSL_IMAGE_FILE@" />
+            <RegistryValue Root="HKCU" Key="@CUB_REGISTRY_KEY_PATH@" Name="@CUB_REG_VAL_IMAGE_INSTALLED@" Type="integer" Value="1" KeyPath="yes" />
+          </Component>
+          <Component Id="TrayAppComponent" Guid="{B3C4D5E6-F789-01AB-CDEF-123456789012}">
+            <File Id="TrayAppExe" Source="Release\@CUB_TRAY_APP_FILE@" />
+            <RemoveFile Id="RemoveTrayAppExe" Name="*.*" On="uninstall" />
+            <RemoveFolder Id="RemoveTrayAppFolder" On="uninstall" />
+            <RegistryValue Root="HKCU" Key="@CUB_REGISTRY_KEY_PATH@" Name="@CUB_REG_VAL_TRAY_APP_INSTALLED@" Type="integer" Value="1" KeyPath="yes" />
+          </Component>
+          <Component Id="CubridStarterComponent" Guid="{D5E6F789-01AB-CDEF-2345-678901234567}">
+            <File Id="CubridStarterExe" Source="Release\@CUB_STARTER_APP_FILE@" />
+            <RegistryValue Root="HKCU" Key="@CUB_REGISTRY_KEY_PATH@" Name="@CUB_REG_VAL_STARTER_INSTALLED@" Type="integer" Value="1" KeyPath="yes" />
+          </Component>
+          <Component Id="NetworkGuideComponent" Guid="{C4D5E6F7-8901-2ABC-DEF1-234567890123}">
+            <File Id="NetworkGuideHtml" Source="..\docs\@CUB_GUIDE_FILE@" />
+            <RemoveFile Id="RemoveDocsFolder" Name="*.*" On="uninstall" />
+            <RemoveFolder Id="RemoveDocsFolderDir" On="uninstall" />
+            <RegistryValue Root="HKCU" Key="@CUB_REGISTRY_KEY_PATH@" Name="@CUB_REG_VAL_DOCS_INSTALLED@" Type="integer" Value="1" KeyPath="yes" />
+          </Component>
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <ComponentGroup Id="ProductComponents">
+      <ComponentRef Id="DummyComponent" />
+      <ComponentRef Id="TrayAppComponent" />
+    </ComponentGroup>
+
+    <Binary Id="CubridCustomActions" SourceFile="CubridCustomActions.dll" />
+
+    <CustomAction Id="ActionEnvironmentCheck" BinaryKey="CubridCustomActions" DllEntry="RunAllEnvironmentChecks" Execute="immediate" Return="check" />
+
+    <CustomAction Id="ActionUpdateInstallFolder" Directory="INSTALLFOLDER" Value="[LocalAppDataFolder][CUB_DEFAULT_WSL_NAME]" />
+    <CustomAction Id="ActionInstallFeatures" BinaryKey="CubridCustomActions" DllEntry="EnableWSLFeatures" Execute="deferred" Impersonate="no" Return="check" />
+    <CustomAction Id="ActionSetInstallFeaturesData" Property="ActionInstallFeatures"
+        Value="CUB_VIRT_MACHINE_PLATFORM_ENABLED=[CUB_VIRT_MACHINE_PLATFORM_ENABLED];CUB_WINDOWS_SUBSYSTEM_LINUX=[CUB_WINDOWS_SUBSYSTEM_LINUX];IS_WSL2_MODE=[IS_WSL2_MODE]" />
+
+    <CustomAction Id="ActionCheckWslName" BinaryKey="CubridCustomActions" DllEntry="CheckWslName" Execute="immediate" Return="ignore" />
+    <CustomAction Id="ActionInvalidWslNameError" Error="!(loc.CUBRID_Error_Invalid_Wsl_Name)" />
+
+    <CustomAction Id="ActionInstallWsl" BinaryKey="CubridCustomActions" DllEntry="InstallWslAndCubrid" Execute="deferred" Impersonate="yes" Return="check" />
+    <CustomAction Id="ActionSetInstallWslData" Property="ActionInstallWsl"
+        Value="REGISTRY_KEY=@CUB_REGISTRY_KEY_PATH@;IS_WSL2_MODE=[IS_WSL2_MODE]" />
+
+    <CustomAction Id="ActionUninstallWsl" BinaryKey="CubridCustomActions" DllEntry="UninstallWsl" Execute="deferred" Impersonate="yes" Return="ignore" />
+    <CustomAction Id="ActionSetUninstallWslData" Property="ActionUninstallWsl"
+        Value="REGISTRY_KEY=@CUB_REGISTRY_KEY_PATH@" />
+
+    <CustomAction Id="ActionRollbackWsl" BinaryKey="CubridCustomActions" DllEntry="UninstallWsl" Execute="rollback" Impersonate="yes" Return="ignore" />
+    <CustomAction Id="ActionSetRollbackWslData" Property="ActionRollbackWsl"
+        Value="REGISTRY_KEY=@CUB_REGISTRY_KEY_PATH@;IS_ROLLBACK=1" />
+
+    <CustomAction Id="ActionRegisterTrayApp" BinaryKey="CubridCustomActions" DllEntry="RegisterTrayApp" Execute="deferred" Return="ignore" Impersonate="yes" />
+    <CustomAction Id="ActionCreateShortcut" BinaryKey="CubridCustomActions" DllEntry="CreateShortcut" Execute="deferred" Return="ignore" Impersonate="yes" />
+    <CustomAction Id="ActionCreateDemodb" BinaryKey="CubridCustomActions" DllEntry="CreateDemodbSync" Execute="deferred" Return="ignore" Impersonate="yes" />
+    <CustomAction Id="ActionStartCubridService" FileKey="CubridStarterExe" ExeCommand="" Execute="deferred" Return="asyncNoWait" Impersonate="yes" />
+    <CustomAction Id="ActionLaunchTrayApp" FileKey="TrayAppExe" ExeCommand="" Execute="deferred" Return="asyncNoWait" Impersonate="yes" />
+    <CustomAction Id="ActionUpdateInstalledSize" BinaryKey="CubridCustomActions" DllEntry="UpdateInstalledSize" Execute="deferred" Return="ignore" Impersonate="yes" />
+
+    <InstallExecuteSequence>
+        <Custom Action="ActionCheckWslName" After="CostFinalize">NOT Installed</Custom>
+        <Custom Action="ActionInvalidWslNameError" After="ActionCheckWslName">NOT Installed AND CUB_WSL_NAME_VALID &lt;&gt; "1"</Custom>
+        <Custom Action="ActionUpdateInstallFolder" After="ActionInvalidWslNameError">NOT Installed AND UILevel &lt; 5</Custom>
+        <Custom Action="ActionSetInstallFeaturesData" Before="ActionInstallFeatures">NOT Installed</Custom>
+        <Custom Action="ActionInstallFeatures" Before="ActionSetRollbackWslData">NOT Installed</Custom>
+        <Custom Action="ActionSetRollbackWslData" Before="ActionRollbackWsl">NOT Installed</Custom>
+        <Custom Action="ActionRollbackWsl" Before="ActionSetInstallWslData">NOT Installed</Custom>
+        <Custom Action="ActionSetInstallWslData" Before="ActionInstallWsl">NOT Installed</Custom>
+        <Custom Action="ActionInstallWsl" Before="ActionCreateDemodb">NOT Installed</Custom>
+
+        <Custom Action="ActionCreateDemodb" Before="ActionRegisterTrayApp">NOT Installed AND CREATE_DEMODB="1"</Custom>
+        <Custom Action="ActionRegisterTrayApp" Before="ActionCreateShortcut">NOT Installed AND REG_TRAY_APP="1"</Custom>
+        <Custom Action="ActionCreateShortcut" Before="ActionStartCubridService">NOT Installed AND CREATE_SHORTCUT="1"</Custom>
+        <Custom Action="ActionStartCubridService" Before="ActionLaunchTrayApp">NOT Installed</Custom>
+        <Custom Action="ActionLaunchTrayApp" Before="ActionUpdateInstalledSize">NOT Installed AND START_TRAY_APP="1"</Custom>
+        <Custom Action="ActionUpdateInstalledSize" Before="InstallFinalize">NOT Installed</Custom>
+
+        <Custom Action="ActionSetUninstallWslData" After="InstallInitialize">REMOVE="ALL"</Custom>
+        <Custom Action="ActionUninstallWsl" After="ActionSetUninstallWslData">REMOVE="ALL"</Custom>
+    </InstallExecuteSequence>
+
+  </Product>
+
+</Wix>
