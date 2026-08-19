@@ -6,23 +6,41 @@
 .DESCRIPTION
     porting of original bash script create_image.sh to PowerShell.
     each TAG:
-      1) if container with the same name exists, stop / rm.
-      2) create container with docker create -i.
-      3) export rootfs to tar with docker export.
-      4) compress with tar -czf. (use bsdtar included in Windows 10/11).
-      5) move tar / tar.gz file to tar_images / targz_images directory.
-      6) remove container.
+      1) verify the cubrid-wsl2:<TAG> image exists (built by build_image.ps1).
+      2) if container with the same name exists, stop / rm.
+      3) create container with docker create -i.
+      4) export rootfs to tar with docker export.
+      5) compress with tar -czf. (use bsdtar included in Windows 10/11).
+      6) move tar / tar.gz file to tar_images / targz_images directory.
+      7) publish the tar.gz to ..\os_image\<TAG>\cubrid-wsl2-latest.tar.gz,
+         overwriting whatever is there. build.bat -v <TAG> picks the image up
+         from that per-version directory.
+      8) remove container.
+
+    Only the artifacts of the tags being processed are replaced, so images
+    built for other versions stay in tar_images / targz_images and keep their
+    own os_image\<TAG> directory.
+
+    Two file names are fixed on purpose:
+      - the tar *inside* the tar.gz is always cubrid-wsl2.tar, because the
+        installer extracts it by that name (CUB_WSL_EXTRACT_IMAGE_FILE).
+      - the published tar.gz is always cubrid-wsl2-latest.tar.gz, because WiX
+        harvests it by that name (CUB_WSL_IMAGE_FILE). The version lives in
+        the directory name, not the file name.
 
 .PARAMETER BaseImageName
     base image name. default 'cubrid-wsl2'.
 
 .PARAMETER Tags
     list of tags to process. default ('11.4').
+    Versions below 10.2 are rejected (see MinSupportedTag below).
 
 .EXAMPLE
     PS> .\create_image.ps1
 .EXAMPLE
     PS> .\create_image.ps1 -Tags 11.4,11.3
+.EXAMPLE
+    PS> .\create_image.ps1 -Tags 10.2
 #>
 
 [CmdletBinding()]
@@ -33,6 +51,10 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+# Oldest CUBRID version CUBRID For WSL supports; kept in step with
+# build_image.ps1.
+$MinSupportedTag = [version]'10.2'
 
 function Invoke-Native {
     [CmdletBinding()]
@@ -77,20 +99,67 @@ Please check the following:
     Write-Host "Docker daemon OK."
 }
 
-$ShellPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$TarDir    = Join-Path $ShellPath 'tar_images'
-$TarGzDir  = Join-Path $ShellPath 'targz_images'
+function Test-SupportedTag {
+    param([Parameter(Mandatory)][string]$Tag)
 
-Write-Host "ShellPath = $ShellPath"
-Write-Host "TarDir    = $TarDir"
-Write-Host "TarGzDir  = $TarGzDir"
+    $parsed = $null
+    if (-not [version]::TryParse($Tag, [ref]$parsed)) {
+        throw "Tag '$Tag' is not a CUBRID version number (expected e.g. 10.2, 11.4)."
+    }
+    if ($parsed -lt $MinSupportedTag) {
+        throw @"
+Tag '$Tag' is not supported. CUBRID For WSL supports $MinSupportedTag and later.
+10.0 / 10.1 are built FROM centos:7, whose package mirrors are retired, so
+those images can no longer be built.
+"@
+    }
+}
+
+function Test-DockerImage {
+    param(
+        [Parameter(Mandatory)][string]$ImageName,
+        [Parameter(Mandatory)][string]$Tag
+    )
+
+    $imageId = (& docker images -q $ImageName | Out-String).Trim()
+    if ([string]::IsNullOrWhiteSpace($imageId)) {
+        throw @"
+Docker image '$ImageName' not found.
+Build it first:
+  .\build_image.ps1 -Tags $Tag
+"@
+    }
+    Write-Host "Found image $ImageName ($imageId)"
+}
+
+$ShellPath   = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$TarDir      = Join-Path $ShellPath 'tar_images'
+$TarGzDir    = Join-Path $ShellPath 'targz_images'
+$OsImageRoot = Join-Path (Split-Path -Parent $ShellPath) 'os_image'
+
+# Name WiX harvests the image by (CUB_WSL_IMAGE_FILE in CMakeLists.txt).
+# It never carries the version - os_image\<TAG>\ does.
+$InstallImageName = 'cubrid-wsl2-latest.tar.gz'
+
+Write-Host "ShellPath   = $ShellPath"
+Write-Host "TarDir      = $TarDir"
+Write-Host "TarGzDir    = $TarGzDir"
+Write-Host "OsImageRoot = $OsImageRoot"
+
+# Validate every tag before doing any work, so a typo fails immediately.
+foreach ($TagName in $Tags) {
+    Test-SupportedTag -Tag $TagName
+}
 
 Test-DockerDaemon
 
-if (Test-Path $TarDir)   { Remove-Item -Recurse -Force $TarDir }
-if (Test-Path $TarGzDir) { Remove-Item -Recurse -Force $TarGzDir }
-New-Item -ItemType Directory -Path $TarDir   | Out-Null
-New-Item -ItemType Directory -Path $TarGzDir | Out-Null
+# Keep artifacts of versions that are not being rebuilt: create the output
+# directories if missing, but never wipe them wholesale.
+foreach ($dir in @($TarDir, $TarGzDir)) {
+    if (-not (Test-Path $dir)) {
+        New-Item -ItemType Directory -Path $dir | Out-Null
+    }
+}
 
 $tarCmd = Get-Command tar.exe -ErrorAction SilentlyContinue
 if (-not $tarCmd) {
@@ -111,7 +180,10 @@ try {
         $CopyImageName   = "cubrid-wsl2-$TagName.tar"
         $Wsl2ImageGzName = "cubrid-wsl2-$TagName.tar.gz"
 
-        $existing = (docker ps -aq -f "name=^/${ContainerName}$") | Out-String
+        Test-DockerImage -ImageName $ImageName -Tag $TagName
+
+        $nameFilter = 'name=^/' + [regex]::Escape($ContainerName) + '$'
+        $existing = (docker ps -aq -f $nameFilter) | Out-String
         $existing = $existing.Trim()
         if ($existing) {
             Write-Host "Container $ContainerName already exists. Stop and remove it."
@@ -125,25 +197,36 @@ try {
         Invoke-Native -Description "docker create $ContainerName" `
             -- docker create -i --name $ContainerName $ImageName
 
-        Write-Host "Exporting container $ContainerName to $Wsl2ImageName"
-        Invoke-Native -Description "docker export $ContainerName" `
-            -- docker export --output $Wsl2ImageName $ContainerName
-        Write-Host "Image $ImageName exported successfully"
+        try {
+            Write-Host "Exporting container $ContainerName to $Wsl2ImageName"
+            Invoke-Native -Description "docker export $ContainerName" `
+                -- docker export --output $Wsl2ImageName $ContainerName
+            Write-Host "Image $ImageName exported successfully"
 
-        Write-Host "Compressing $Wsl2ImageName -> $Wsl2ImageGzName"
-        Invoke-Native -Description "tar -czf $Wsl2ImageGzName" `
-            -- tar -czf $Wsl2ImageGzName $Wsl2ImageName
+            Write-Host "Compressing $Wsl2ImageName -> $Wsl2ImageGzName"
+            Invoke-Native -Description "tar -czf $Wsl2ImageGzName" `
+                -- tar -czf $Wsl2ImageGzName $Wsl2ImageName
 
-        $tarGzDest = Join-Path $TarGzDir $Wsl2ImageGzName
-        $tarDest   = Join-Path $TarDir   $CopyImageName
-        Move-Item -Force $Wsl2ImageGzName $tarGzDest
-        Move-Item -Force $Wsl2ImageName   $tarDest
+            $tarGzDest = Join-Path $TarGzDir $Wsl2ImageGzName
+            $tarDest   = Join-Path $TarDir   $CopyImageName
+            Move-Item -Force $Wsl2ImageGzName $tarGzDest
+            Move-Item -Force $Wsl2ImageName   $tarDest
 
-        Write-Host "Compressed Image path:   $tarGzDest"
-        Write-Host "Uncompressed Image path: $tarDest"
+            Write-Host "Compressed Image path:   $tarGzDest"
+            Write-Host "Uncompressed Image path: $tarDest"
 
-        Write-Host "Removing container $ContainerName"
-        Invoke-Native -Description "docker rm $ContainerName" -- docker rm $ContainerName
+            # Publish into the per-version directory build.bat -v <TAG> reads.
+            $osImageVersionDir = Join-Path $OsImageRoot $TagName
+            if (-not (Test-Path $osImageVersionDir)) {
+                New-Item -ItemType Directory -Path $osImageVersionDir -Force | Out-Null
+            }
+            $installImageDest = Join-Path $osImageVersionDir $InstallImageName
+            Copy-Item -Force $tarGzDest $installImageDest
+            Write-Host "Install image path:      $installImageDest"
+        } finally {
+            Write-Host "Removing container $ContainerName"
+            Invoke-Native -Description "docker rm $ContainerName" -- docker rm $ContainerName
+        }
     }
 } finally {
     Pop-Location

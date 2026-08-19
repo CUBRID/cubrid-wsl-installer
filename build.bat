@@ -15,8 +15,10 @@ set SHELL_DIR=%~dp0
 set BUILD_DIR=%SHELL_DIR%build\
 set OS_IMAGE_DIR=%SHELL_DIR%os_image\
 set VERSION_FILE=%SHELL_DIR%VERSION
-set COPY_IMAGE_TAR_GZ_FILE=cubrid-wsl2-%CUBRID_VERSION%.tar.gz
+REM make_image\create_image.ps1 publishes each version to os_image\<version>\,
+REM always under the fixed name WiX harvests. Recomputed after -v is parsed.
 set INSTALL_IMAGE_TAR_GZ_FILE=cubrid-wsl2-latest.tar.gz
+set OS_IMAGE_VERSION_DIR=%OS_IMAGE_DIR%%CUBRID_VERSION%\
 set WIX_DIR=C:\Program Files (x86)\WiX Toolset v3.14\bin
 set WIX_SDK_DIR=C:\Program Files (x86)\WiX Toolset v3.14\SDK
 call :FINDEXEC "git.exe" GIT_PATH "C:\Program Files\Git\bin\git.exe"
@@ -85,7 +87,7 @@ if not "%IMAGE_COPY_OPTION%"=="0" if not "%IMAGE_COPY_OPTION%"=="1" (
     exit /b 1
 )
 
-set COPY_IMAGE_TAR_GZ_FILE=cubrid-wsl2-%CUBRID_VERSION%.tar.gz
+set OS_IMAGE_VERSION_DIR=%OS_IMAGE_DIR%%CUBRID_VERSION%\
 
 echo [INFO] Checking CMake...
 "%CMAKE_PATH%" --version >nul 2>&1
@@ -131,28 +133,29 @@ if not exist "%OS_IMAGE_DIR%" (
 )
 
 if "%IMAGE_COPY_OPTION%"=="1" (
-    if exist "%SHELL_DIR%make_image\targz_images\%COPY_IMAGE_TAR_GZ_FILE%" (
+    if exist "%OS_IMAGE_VERSION_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%" (
         if exist "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%" (
             move /y "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%" "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%".temp
         )
-        echo [INFO] Copy local image...
-        copy /y "%SHELL_DIR%make_image\targz_images\%COPY_IMAGE_TAR_GZ_FILE%" "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%" >nul
-        if %errorLevel% neq 0 (
-            echo [ERROR] Image copy fail. Please check ["%SHELL_DIR%make_image\targz_images\%COPY_IMAGE_TAR_GZ_FILE%"]
+        echo [INFO] Copy local image... ^(%CUBRID_VERSION%^)
+        copy /y "%OS_IMAGE_VERSION_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%" "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%" >nul
+        if !errorLevel! neq 0 (
+            echo [ERROR] Image copy fail. Please check ["%OS_IMAGE_VERSION_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%"]
             echo [ERROR] If you do not need to copy the image, use the '-c 0' option. e.g.^) build.bat -c 0
-            if exist "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%".temp ( 
+            if exist "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%".temp (
                 move /y "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%".temp "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%"
             )
             pause
             exit /b 1
         ) else (
-            if exist "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%".temp ( 
+            if exist "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%".temp (
                 del /f /q "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%".temp
             )
-            echo [INFO] %COPY_IMAGE_TAR_GZ_FILE% copied.
+            echo [INFO] %CUBRID_VERSION%\%INSTALL_IMAGE_TAR_GZ_FILE% copied.
         )
     ) else (
-        echo [ERROR] %SHELL_DIR%make_image\targz_images\%COPY_IMAGE_TAR_GZ_FILE% does not exists.
+        echo [ERROR] %OS_IMAGE_VERSION_DIR%%INSTALL_IMAGE_TAR_GZ_FILE% does not exists.
+        echo [ERROR] Create it first: powershell -File make_image\create_image.ps1 -Tags %CUBRID_VERSION%
         echo [ERROR] If you do not need to copy the image, use the '-c 0' option. e.g.^) build.bat -c 0
         pause
         exit /b 1
@@ -311,7 +314,7 @@ echo                    3  Build only Bundle EXE
 echo   -v ^<version^>  CUBRID version (default: 11.4)
 echo   -c ^<0^|1^>      Install-image copy option (default: 1)
 echo                    0  Reuse existing install image
-echo                    1  Delete and re-copy from make_image\targz_images
+echo                    1  Delete and re-copy from os_image\^<version^>
 echo   -h, /?          Show this help message
 echo.
 echo Examples:
