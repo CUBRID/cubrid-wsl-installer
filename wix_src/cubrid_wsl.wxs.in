@@ -132,6 +132,7 @@
         Value="REGISTRY_KEY=@CUB_REGISTRY_KEY_PATH@;IS_ROLLBACK=1" />
 
     <CustomAction Id="ActionRegisterTrayApp" BinaryKey="CubridCustomActions" DllEntry="RegisterTrayApp" Execute="deferred" Return="ignore" Impersonate="yes" />
+    <CustomAction Id="ActionRegisterStarterApp" BinaryKey="CubridCustomActions" DllEntry="RegisterStarterApp" Execute="deferred" Return="ignore" Impersonate="yes" />
     <CustomAction Id="ActionCreateShortcut" BinaryKey="CubridCustomActions" DllEntry="CreateShortcut" Execute="deferred" Return="ignore" Impersonate="yes" />
     <CustomAction Id="ActionCreateDemodb" BinaryKey="CubridCustomActions" DllEntry="CreateDemodbSync" Execute="deferred" Return="ignore" Impersonate="yes" />
     <CustomAction Id="ActionStartCubridService" FileKey="CubridStarterExe" ExeCommand="" Execute="deferred" Return="asyncNoWait" Impersonate="yes" />
@@ -149,7 +150,8 @@
         <Custom Action="ActionSetInstallWslData" Before="ActionInstallWsl">NOT Installed</Custom>
         <Custom Action="ActionInstallWsl" Before="ActionCreateDemodb">NOT Installed</Custom>
 
-        <Custom Action="ActionCreateDemodb" Before="ActionRegisterTrayApp">NOT Installed AND CREATE_DEMODB="1"</Custom>
+        <Custom Action="ActionCreateDemodb" Before="ActionRegisterStarterApp">NOT Installed AND CREATE_DEMODB="1"</Custom>
+        <Custom Action="ActionRegisterStarterApp" Before="ActionRegisterTrayApp">NOT Installed</Custom>
         <Custom Action="ActionRegisterTrayApp" Before="ActionCreateShortcut">NOT Installed AND REG_TRAY_APP="1"</Custom>
         <Custom Action="ActionCreateShortcut" Before="ActionStartCubridService">NOT Installed AND CREATE_SHORTCUT="1"</Custom>
         <Custom Action="ActionStartCubridService" Before="ActionLaunchTrayApp">NOT Installed</Custom>

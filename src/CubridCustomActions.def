@@ -5,6 +5,7 @@ EXPORTS
     UninstallWsl
     LaunchTrayApp
     RegisterTrayApp
+    RegisterStarterApp
     CreateShortcut
     StartWSL
     UpdateInstalledSize

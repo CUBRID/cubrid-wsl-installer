@@ -12,9 +12,6 @@
 .PARAMETER Tags
     build tags. default ('11.4').
 
-.PARAMETER LatestTag
-    `latest` tag. default '11.4'.
-
 .PARAMETER Repo
         cubrid-docker repository URL. default https://github.com/CUBRID/cubrid-docker.git.
 
@@ -35,7 +32,7 @@
 .EXAMPLE
     PS> .\build_image.ps1
 .EXAMPLE
-    PS> .\build_image.ps1 -Tags 11.4,11.3 -LatestTag 11.4
+    PS> .\build_image.ps1 -Tags 11.4,11.3
 .EXAMPLE
     PS> .\build_image.ps1 -Repo 'https://github.com/CUBRID/cubrid-docker.git'
 .EXAMPLE
@@ -52,7 +49,6 @@
 [CmdletBinding()]
 param(
     [string[]]$Tags = @('11.4'),
-    [string]$LatestTag = '11.4',
     [string]$Repo = 'https://github.com/CUBRID/cubrid-docker.git',
     [switch]$NoCache,
     [switch]$Pull,
@@ -180,9 +176,6 @@ foreach ($TagName in $Tags) {
     Copy-Item -Force $DockerEntrypoint (Join-Path $BuildDirPath 'docker-entrypoint.sh')
 
     $imageTags = @("cubrid-wsl2:$TagName")
-    if ($TagName -eq $LatestTag) {
-        $imageTags += 'cubrid-wsl2:latest'
-    }
 
     Push-Location $BuildDirPath
     try {

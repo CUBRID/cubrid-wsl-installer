@@ -132,17 +132,23 @@ if not exist "%OS_IMAGE_DIR%" (
 
 if "%IMAGE_COPY_OPTION%"=="1" (
     if exist "%SHELL_DIR%make_image\targz_images\%COPY_IMAGE_TAR_GZ_FILE%" (
-        move /y "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%" "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%".temp
+        if exist "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%" (
+            move /y "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%" "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%".temp
+        )
         echo [INFO] Copy local image...
         copy /y "%SHELL_DIR%make_image\targz_images\%COPY_IMAGE_TAR_GZ_FILE%" "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%" >nul
         if %errorLevel% neq 0 (
             echo [ERROR] Image copy fail. Please check ["%SHELL_DIR%make_image\targz_images\%COPY_IMAGE_TAR_GZ_FILE%"]
             echo [ERROR] If you do not need to copy the image, use the '-c 0' option. e.g.^) build.bat -c 0
-            move /y "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%".temp "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%"
+            if exist "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%".temp ( 
+                move /y "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%".temp "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%"
+            )
             pause
             exit /b 1
         ) else (
-            del /f /q "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%".temp
+            if exist "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%".temp ( 
+                del /f /q "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%".temp
+            )
             echo [INFO] %COPY_IMAGE_TAR_GZ_FILE% copied.
         )
     ) else (

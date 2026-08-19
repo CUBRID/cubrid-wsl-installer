@@ -35,6 +35,7 @@ class CUBRIDInstaller
 {
   public:
     static const char *START_UP_REGISTRY_KEY_PATH;
+    static const char *STARTUP_APPROVED_REGISTRY_KEY_PATH;
     static const std::string MSI_INSTALL_REG_KEY_PATH;
     static const std::string BUNDLE_INSTALL_REG_KEY_PATH;
 
@@ -46,6 +47,8 @@ class CUBRIDInstaller
     bool UninstallWsl (const std::string &wslName);
     bool RegisterTrayApp (const std::string &trayAppPath);
     bool UnregisterTrayApp();
+    bool RegisterStarterApp (const std::string &starterAppPath);
+    bool UnregisterStarterApp();
     bool CreateShortcut (const std::string &shortcutPath, const std::string &exePath, const std::string &arguments,
 			 const std::string &workingDir, const std::string &iconPath);
     std::string GetWslPath();
@@ -59,6 +62,9 @@ class CUBRIDInstaller
     static bool WasImportSucceeded (const std::string &wslName);
 
   private:
+    void ClearStartupApprovedFlag (const char *valueName);
+    bool RegisterStartupEntry (const char *valueName, const std::string &exePath, const char *description);
+    bool UnregisterStartupEntry (const char *valueName, const char *description);
     bool ExtractCubridImage (const std::string &imageFile, const std::string &targetPath);
     bool SetupWslDistro (const InstallOptions &options);
     void CleanUpFile (const std::string &filePath);

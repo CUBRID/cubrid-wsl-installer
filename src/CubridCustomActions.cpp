@@ -194,6 +194,40 @@ extern "C" {
       }
   }
 
+  __declspec (dllexport) UINT __stdcall RegisterStarterApp (MSIHANDLE hInstall)
+  {
+    SetupMsiContext (hInstall);
+    logger.LogInfo ("Registering Starter Application...");
+
+    std::string installDir;
+
+    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_INSTALL_DIR,
+	installDir))
+      {
+	logger.LogError ("Failed to get InstallDir from registry");
+	return ERROR_INSTALL_FAILURE;
+      }
+
+    std::string starterAppPath = (std::filesystem::path (installDir) / CUB_STARTER_APP_FILE).string();
+    logger.LogInfo ("RegisterStarterApp: Starter App Path: " + starterAppPath);
+
+    if (!std::filesystem::exists (starterAppPath))
+      {
+	logger.LogError ("Starter application not found at: " + starterAppPath);
+	return ERROR_INSTALL_FAILURE;
+      }
+
+    CUBRIDInstaller installer;
+    if (installer.RegisterStarterApp (starterAppPath))
+      {
+	logger.LogInfo ("Starter application registered successfully to Windows Startup.");
+	return ERROR_SUCCESS;
+      }
+
+    logger.LogError ("Failed to register starter application to Windows Startup.");
+    return ERROR_INSTALL_FAILURE;
+  }
+
   __declspec (dllexport) UINT __stdcall LaunchTrayApp (MSIHANDLE hInstall)
   {
     SetupMsiContext (hInstall);
@@ -368,6 +402,7 @@ extern "C" {
       }
 
     installer.UnregisterTrayApp();
+    installer.UnregisterStarterApp();
 
     if (!installPath.empty())
       {

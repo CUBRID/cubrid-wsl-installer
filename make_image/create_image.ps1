@@ -17,18 +17,18 @@
     base image name. default 'cubrid-wsl2'.
 
 .PARAMETER Tags
-    list of tags to process. default ('latest', '11.4').
+    list of tags to process. default ('11.4').
 
 .EXAMPLE
     PS> .\create_image.ps1
 .EXAMPLE
-    PS> .\create_image.ps1 -Tags latest,11.4,11.3
+    PS> .\create_image.ps1 -Tags 11.4,11.3
 #>
 
 [CmdletBinding()]
 param(
     [string]$BaseImageName = 'cubrid-wsl2',
-    [string[]]$Tags = @('latest', '11.4')
+    [string[]]$Tags = @('11.4')
 )
 
 Set-StrictMode -Version Latest
