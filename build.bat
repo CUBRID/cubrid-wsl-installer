@@ -19,6 +19,8 @@ REM make_image\create_image.ps1 publishes each version to os_image\<version>\,
 REM always under the fixed name WiX harvests. Recomputed after -v is parsed.
 set INSTALL_IMAGE_TAR_GZ_FILE=cubrid-wsl2-latest.tar.gz
 set OS_IMAGE_VERSION_DIR=%OS_IMAGE_DIR%%CUBRID_VERSION%\
+set IMAGE_STAMP_FILE=%OS_IMAGE_DIR%cubrid-wsl2-latest.version
+set MSI_STAMP_FILE=%BUILD_DIR%CUBRID_Base.version
 set WIX_DIR=C:\Program Files (x86)\WiX Toolset v3.14\bin
 set WIX_SDK_DIR=C:\Program Files (x86)\WiX Toolset v3.14\SDK
 call :FINDEXEC "git.exe" GIT_PATH "C:\Program Files\Git\bin\git.exe"
@@ -118,6 +120,7 @@ set MSI_FILE_NAME=CUBRID-%CUBRID_VERSION%-For-WSL-%VERSION%-%EXTRA_VERSION%-win6
 
 if "%BUILD_TYPE%"=="3" (
     call :EXE_BUILD
+    if errorlevel 1 exit /b 1
     GOTO :EOF
 ) else if "%BUILD_TYPE%"=="2" (
     set IMAGE_COPY_OPTION=0
@@ -151,12 +154,21 @@ if "%IMAGE_COPY_OPTION%"=="1" (
             if exist "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%".temp (
                 del /f /q "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%".temp
             )
+            > "%IMAGE_STAMP_FILE%" echo %CUBRID_VERSION%
             echo [INFO] %CUBRID_VERSION%\%INSTALL_IMAGE_TAR_GZ_FILE% copied.
         )
     ) else (
         echo [ERROR] %OS_IMAGE_VERSION_DIR%%INSTALL_IMAGE_TAR_GZ_FILE% does not exists.
-        echo [ERROR] Create it first: powershell -File make_image\create_image.ps1 -Tags %CUBRID_VERSION%
+        echo [ERROR] Create it first: powershell -File make_image\create_image.ps1 -v %CUBRID_VERSION%
         echo [ERROR] If you do not need to copy the image, use the '-c 0' option. e.g.^) build.bat -c 0
+        pause
+        exit /b 1
+    )
+)
+
+if "%IMAGE_COPY_OPTION%"=="0" if not "%BUILD_TYPE%"=="2" (
+    call :VERIFY_IMAGE_VERSION
+    if errorlevel 1 (
         pause
         exit /b 1
     )
@@ -251,6 +263,7 @@ if %errorlevel% neq 0 (
 echo [INFO] Finalizing Multi-language MSI...
 copy /Y CUBRID_Base.msi %MSI_FILE_NAME%
 del CUBRID_Ko.msi wix\cubrid_base.pdb wix\cubrid_ko.pdb
+> "%MSI_STAMP_FILE%" echo %CUBRID_VERSION%
 
 echo [INFO] Multi-language MSI build complete.
 
@@ -259,6 +272,7 @@ if "%BUILD_TYPE%"=="1" (
 )
 
 call :EXE_BUILD
+if errorlevel 1 exit /b 1
 
 GOTO :EOF
 
@@ -275,8 +289,59 @@ if NOT defined FOUNDINPATH if NOT EXIST "%~3" echo Executable [%1] is not found 
 call echo Executable [%1] is found at [%%%2%%]
 GOTO :EOF
 
+:VERIFY_IMAGE_VERSION
+if not exist "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%" (
+    echo [ERROR] No staged install image: %OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%
+    echo [ERROR] Drop the '-c 0' option so the %CUBRID_VERSION% image is staged.
+    exit /b 1
+)
+set STAGED_VERSION=
+if exist "%IMAGE_STAMP_FILE%" (
+    for /f "usebackq delims=" %%i in ("%IMAGE_STAMP_FILE%") do set STAGED_VERSION=%%i
+)
+if not defined STAGED_VERSION (
+    echo [ERROR] Cannot tell which CUBRID version the staged install image is:
+    echo [ERROR]   %OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%
+    echo [ERROR] Run once without '-c 0' to stage %CUBRID_VERSION% and record it.
+    exit /b 1
+)
+if /i not "%STAGED_VERSION%"=="%CUBRID_VERSION%" (
+    echo [ERROR] Staged install image is CUBRID %STAGED_VERSION%, but this build is %CUBRID_VERSION%.
+    echo [ERROR] Packaging it would label the installer %CUBRID_VERSION% while installing %STAGED_VERSION%.
+    echo [ERROR] Drop '-c 0' to stage %CUBRID_VERSION%, or build with '-v %STAGED_VERSION%'.
+    exit /b 1
+)
+echo [INFO] Staged install image verified: CUBRID %STAGED_VERSION%
+exit /b 0
+
+:VERIFY_MSI_VERSION
+if not exist "%BUILD_DIR%CUBRID_Base.msi" (
+    echo [ERROR] No MSI to bundle: %BUILD_DIR%CUBRID_Base.msi
+    echo [ERROR] Build the MSI first. e.g.^) build.bat -t 1 -v %CUBRID_VERSION%
+    exit /b 1
+)
+set BUILT_MSI_VERSION=
+if exist "%MSI_STAMP_FILE%" (
+    for /f "usebackq delims=" %%i in ("%MSI_STAMP_FILE%") do set BUILT_MSI_VERSION=%%i
+)
+if not defined BUILT_MSI_VERSION (
+    echo [ERROR] Cannot tell which CUBRID version CUBRID_Base.msi was built from.
+    echo [ERROR] Rebuild the MSI. e.g.^) build.bat -t 1 -v %CUBRID_VERSION%
+    exit /b 1
+)
+if /i not "%BUILT_MSI_VERSION%"=="%CUBRID_VERSION%" (
+    echo [ERROR] CUBRID_Base.msi was built for CUBRID %BUILT_MSI_VERSION%, but this bundle is %CUBRID_VERSION%.
+    echo [ERROR] The EXE would be named %CUBRID_VERSION% while installing %BUILT_MSI_VERSION%.
+    echo [ERROR] Rebuild with '-t 1 -v %CUBRID_VERSION%', or bundle with '-v %BUILT_MSI_VERSION%'.
+    exit /b 1
+)
+echo [INFO] MSI to bundle verified: CUBRID %BUILT_MSI_VERSION%
+exit /b 0
+
 :EXE_BUILD
 echo [INFO] Building Bundle EXE...
+call :VERIFY_MSI_VERSION
+if errorlevel 1 exit /b 1
 cd "%BUILD_DIR%"
 if exist "%INSTALL_FILE_NAME%" (
     echo [INFO] Bundle EXE already exists. Deleting...
@@ -313,7 +378,8 @@ echo                    2  Build only C++ binaries
 echo                    3  Build only Bundle EXE
 echo   -v ^<version^>  CUBRID version (default: 11.4)
 echo   -c ^<0^|1^>      Install-image copy option (default: 1)
-echo                    0  Reuse existing install image
+echo                    0  Reuse the staged install image; the build aborts
+echo                       unless it was staged for the same -v version
 echo                    1  Delete and re-copy from os_image\^<version^>
 echo   -h, /?          Show this help message
 echo.
