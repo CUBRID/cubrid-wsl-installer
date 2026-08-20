@@ -373,7 +373,7 @@ void CUBRIDInstaller::ClearStartupApprovedFlag (const char *valueName)
 }
 
 bool CUBRIDInstaller::RegisterStartupEntry (const char *valueName, const std::string &exePath,
-    const char *description)
+					    const char *description)
 {
   logger.LogInfo ("Registering " + std::string (description) + " to Windows Startup: " + exePath);
 
