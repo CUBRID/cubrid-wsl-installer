@@ -3,28 +3,35 @@
     build cubrid-wsl2 Docker image (Windows + Docker Desktop).
 
 .DESCRIPTION
-    porting of original bash script build_image.sh to PowerShell.
       1) if cubrid-docker repository is not exists, git clone.
          otherwise fetch and hard-reset it to the remote default branch, so a
          build always uses the latest upstream recipe.
-      2) stage the version directory into .build\<TAG> and append the
+      2) stage the version directory into .build\<VERSION>, copy
+         docker-entrypoint.sh over the one the version ships, and append the
          "CUBRID For WSL" overlay to a copy of its Dockerfile.
-      3) build cubrid-wsl2:<TAG> image with docker build from that staging
+      3) build cubrid-wsl2:<VERSION> image with docker build from that staging
          directory.
 
     The clone is treated as a read-only build artifact: nothing is ever copied
     into it, so the reset in step 1 can always succeed and every version is
     built from pristine upstream sources.
 
-    The overlay in step 2 is what makes versions other than 11.4 usable.
-    The upstream Dockerfiles differ - only 11.4 installs ~/.cubrid.sh, and the
+    docker-entrypoint.sh is the only file staged from make_image. It replaces
+    the container-oriented entrypoint the versions ship, because on WSL the
+    installer creates demodb itself.
+
+    The overlay in step 2 is what makes versions other than 11.4 usable. The
+    upstream Dockerfiles differ - only 11.4 installs ~/.cubrid.sh, and the
     older ones put the databases directory in /var/lib/cubrid - while the
     Windows side (installer, tray app, starter) always runs
-    `. ~/.cubrid.sh; cubrid ...`. The overlay normalises that layout.
+    `. ~/.cubrid.sh; cubrid ...`. The overlay writes that file in place when
+    the version does not already provide one; nothing is copied for it.
 
-.PARAMETER Tags
-    build tags. default ('11.4'). Any version directory present in the
-    cubrid-docker repository is valid, e.g. -Tags 10.2,11.3
+.PARAMETER Version
+    CUBRID versions to build, default ('11.4'). Positional, so
+    `.\build_image.ps1 10.2` works, and aliased to -v to match build.bat.
+    Any version directory present in the cubrid-docker repository is valid,
+    e.g. -v 10.2,11.3
     Versions below 10.2 are rejected (see MinSupportedTag below).
 
 .PARAMETER Repo
@@ -51,9 +58,10 @@
 .EXAMPLE
     PS> .\build_image.ps1
 .EXAMPLE
-    PS> .\build_image.ps1 -Tags 11.4,11.3
+    # Positional - shortest form:
+    PS> .\build_image.ps1 10.2
 .EXAMPLE
-    PS> .\build_image.ps1 -Tags 10.2
+    PS> .\build_image.ps1 -v 11.4,11.3
 .EXAMPLE
     PS> .\build_image.ps1 -Repo 'https://github.com/CUBRID/cubrid-docker.git'
 .EXAMPLE
@@ -69,7 +77,11 @@
 
 [CmdletBinding()]
 param(
-    [string[]]$Tags = @('11.4'),
+    # object[], not string[]: see ConvertTo-VersionTag for why.
+    [Parameter(Position = 0)]
+    [Alias('v', 'Tags')]
+    [object[]]$Version = @('11.4'),
+    [Parameter(Position = 1)]
     [string]$Repo = 'https://github.com/CUBRID/cubrid-docker.git',
     [switch]$NoCache,
     [switch]$Pull,
@@ -92,9 +104,10 @@ $MinSupportedTag = [version]'10.2'
 # Appended to a *copy* of each version's Dockerfile. ASCII only: it is
 # appended with -Encoding Ascii so no BOM lands in the middle of the file.
 #
-# 11.4 already does all of this upstream, so the overlay is written to be
-# idempotent - it re-copies the same files and skips the .bash_profile block
-# when one is already present.
+# No file is COPYed here. 11.4 installs .cubrid.sh from its own repository
+# copy, so the overlay only writes the file for versions that ship none, and
+# leaves an existing one untouched. Same for the .bash_profile block, which
+# makes the whole overlay idempotent.
 # ------------------------------------------------------------------
 $WslOverlay = @'
 
@@ -102,15 +115,19 @@ $WslOverlay = @'
 # CUBRID For WSL overlay - appended by build_image.ps1.
 # Normalises the layout the Windows side depends on:
 #   /home/cubrid/.cubrid.sh        sourced by every wsl.exe call
-#   /home/cubrid/entrypoint.sh     one-shot hook, run and deleted by .cubrid.sh
 #   /home/cubrid/CUBRID/databases  CUBRID_DATABASES as .cubrid.sh defines it
 # ============================================================
-COPY wsl_cubrid.sh /home/cubrid/.cubrid.sh
-COPY wsl_entrypoint.sh /home/cubrid/entrypoint.sh
-
 RUN set -eux; \
-    chmod 755 /home/cubrid/.cubrid.sh /home/cubrid/entrypoint.sh; \
-    chown cubrid:cubrid /home/cubrid/.cubrid.sh /home/cubrid/entrypoint.sh; \
+    if [ ! -f /home/cubrid/.cubrid.sh ]; then \
+        echo 'export CUBRID=/home/cubrid/CUBRID' >> /home/cubrid/.cubrid.sh; \
+        echo 'export CUBRID_DATABASES=$CUBRID/databases' >> /home/cubrid/.cubrid.sh; \
+        echo '' >> /home/cubrid/.cubrid.sh; \
+        echo 'LD_LIBRARY_PATH=$CUBRID/lib:$CUBRID/cci/lib:$LD_LIBRARY_PATH' >> /home/cubrid/.cubrid.sh; \
+        echo 'PATH=$CUBRID/bin:/usr/sbin:$PATH' >> /home/cubrid/.cubrid.sh; \
+        echo 'export LD_LIBRARY_PATH SHLIB_PATH LIBPATH PATH' >> /home/cubrid/.cubrid.sh; \
+    fi; \
+    chmod 755 /home/cubrid/.cubrid.sh; \
+    chown cubrid:cubrid /home/cubrid/.cubrid.sh; \
     mkdir -p /home/cubrid/CUBRID/databases; \
     chown -R cubrid:cubrid /home/cubrid/CUBRID; \
     touch /home/cubrid/.bash_profile; \
@@ -170,6 +187,15 @@ Please check the following:
 "@
     }
     Write-Host "Docker daemon OK."
+}
+
+function ConvertTo-VersionTag {
+    param($Value)
+
+    if ($Value -is [double] -or $Value -is [single] -or $Value -is [decimal]) {
+        return ([double]$Value).ToString('0.0###', [cultureinfo]::InvariantCulture)
+    }
+    return [string]$Value
 }
 
 function Test-SupportedTag {
@@ -263,7 +289,6 @@ function New-WslBuildContext {
     param(
         [Parameter(Mandatory)][string]$SourceDir,
         [Parameter(Mandatory)][string]$StagingDir,
-        [Parameter(Mandatory)][string]$CubridSh,
         [Parameter(Mandatory)][string]$EntrypointSh
     )
 
@@ -277,10 +302,9 @@ function New-WslBuildContext {
         throw "Dockerfile not found in build context: $dockerfile"
     }
 
-    # Distinct names so the overlay never collides with a version that ships
-    # its own cubrid.sh / docker-entrypoint.sh (11.4 does).
-    Copy-Item -Force $CubridSh     (Join-Path $StagingDir 'wsl_cubrid.sh')
-    Copy-Item -Force $EntrypointSh (Join-Path $StagingDir 'wsl_entrypoint.sh')
+    # Every version COPYs docker-entrypoint.sh, so replacing it in the staging
+    # copy is enough - and the clone keeps its original.
+    Copy-Item -Force $EntrypointSh (Join-Path $StagingDir 'docker-entrypoint.sh')
 
     Add-Content -Path $dockerfile -Value $WslOverlay -Encoding Ascii
 
@@ -312,19 +336,16 @@ Write-Host "ShellPath   = $ShellPath"
 Write-Host "DockerPath  = $DockerPath"
 Write-Host "StagingRoot = $StagingRoot"
 
-# Validate every tag before doing any work, so a typo fails immediately
-# instead of after a long clone / build.
-foreach ($TagName in $Tags) {
+$Version = @($Version | ForEach-Object { ConvertTo-VersionTag $_ })
+Write-Host "Versions    = $($Version -join ', ')"
+
+foreach ($TagName in $Version) {
     Test-SupportedTag -Tag $TagName
 }
 
-$CubridSh         = Join-Path $ShellPath 'cubrid.sh'
 $DockerEntrypoint = Join-Path $ShellPath 'docker-entrypoint.sh'
-
-foreach ($f in @($CubridSh, $DockerEntrypoint)) {
-    if (-not (Test-Path $f)) {
-        throw "Source file not found: $f"
-    }
+if (-not (Test-Path $DockerEntrypoint)) {
+    throw "Source file not found: $DockerEntrypoint"
 }
 
 Test-DockerDaemon
@@ -338,10 +359,10 @@ if ($usePull)    { $commonBuildFlags += '--pull' }
 Write-Host ""
 Write-Host "Build options: NoCache=$useNoCache  Pull=$usePull  Clean=$($Clean.IsPresent)"
 
-foreach ($TagName in $Tags) {
+foreach ($TagName in $Version) {
     Write-Host ""
     Write-Host "===================================================="
-    Write-Host " Building image for tag: $TagName"
+    Write-Host " Building image for version: $TagName"
     Write-Host "===================================================="
 
     $BuildDirPath = Join-Path $DockerPath $TagName
@@ -351,14 +372,13 @@ foreach ($TagName in $Tags) {
                         ForEach-Object { $_.Name }) -join ', '
         throw @"
 Build directory not found: $BuildDirPath
-Tag '$TagName' does not exist in the cubrid-docker repository.
+Version '$TagName' does not exist in the cubrid-docker repository.
 Available versions: $available
 "@
     }
 
     $StagingPath = New-WslBuildContext -SourceDir $BuildDirPath `
                                        -StagingDir (Join-Path $StagingRoot $TagName) `
-                                       -CubridSh $CubridSh `
                                        -EntrypointSh $DockerEntrypoint
     Write-Host "Build context: $StagingPath (upstream $TagName + WSL overlay)"
 

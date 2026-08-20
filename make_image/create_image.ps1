@@ -4,7 +4,6 @@
     (Windows + Docker Desktop).
 
 .DESCRIPTION
-    porting of original bash script create_image.sh to PowerShell.
     each TAG:
       1) verify the cubrid-wsl2:<TAG> image exists (built by build_image.ps1).
       2) if container with the same name exists, stop / rm.
@@ -28,25 +27,31 @@
         harvests it by that name (CUB_WSL_IMAGE_FILE). The version lives in
         the directory name, not the file name.
 
+.PARAMETER Version
+    CUBRID versions to process, default ('11.4'). Positional, so
+    `.\create_image.ps1 10.2` works, and aliased to -v to match build.bat.
+    Versions below 10.2 are rejected (see MinSupportedTag below).
+
 .PARAMETER BaseImageName
     base image name. default 'cubrid-wsl2'.
-
-.PARAMETER Tags
-    list of tags to process. default ('11.4').
-    Versions below 10.2 are rejected (see MinSupportedTag below).
 
 .EXAMPLE
     PS> .\create_image.ps1
 .EXAMPLE
-    PS> .\create_image.ps1 -Tags 11.4,11.3
+    # Positional - shortest form:
+    PS> .\create_image.ps1 10.2
 .EXAMPLE
-    PS> .\create_image.ps1 -Tags 10.2
+    PS> .\create_image.ps1 -v 11.4,11.3
 #>
 
 [CmdletBinding()]
 param(
-    [string]$BaseImageName = 'cubrid-wsl2',
-    [string[]]$Tags = @('11.4')
+    # object[], not string[]: see ConvertTo-VersionTag for why.
+    [Parameter(Position = 0)]
+    [Alias('v', 'Tags')]
+    [object[]]$Version = @('11.4'),
+    [Parameter(Position = 1)]
+    [string]$BaseImageName = 'cubrid-wsl2'
 )
 
 Set-StrictMode -Version Latest
@@ -99,6 +104,15 @@ Please check the following:
     Write-Host "Docker daemon OK."
 }
 
+function ConvertTo-VersionTag {
+    param($Value)
+
+    if ($Value -is [double] -or $Value -is [single] -or $Value -is [decimal]) {
+        return ([double]$Value).ToString('0.0###', [cultureinfo]::InvariantCulture)
+    }
+    return [string]$Value
+}
+
 function Test-SupportedTag {
     param([Parameter(Mandatory)][string]$Tag)
 
@@ -126,7 +140,7 @@ function Test-DockerImage {
         throw @"
 Docker image '$ImageName' not found.
 Build it first:
-  .\build_image.ps1 -Tags $Tag
+  .\build_image.ps1 $Tag
 "@
     }
     Write-Host "Found image $ImageName ($imageId)"
@@ -146,8 +160,10 @@ Write-Host "TarDir      = $TarDir"
 Write-Host "TarGzDir    = $TarGzDir"
 Write-Host "OsImageRoot = $OsImageRoot"
 
-# Validate every tag before doing any work, so a typo fails immediately.
-foreach ($TagName in $Tags) {
+$Version = @($Version | ForEach-Object { ConvertTo-VersionTag $_ })
+Write-Host "Versions    = $($Version -join ', ')"
+
+foreach ($TagName in $Version) {
     Test-SupportedTag -Tag $TagName
 }
 
@@ -168,10 +184,10 @@ if (-not $tarCmd) {
 
 Push-Location $ShellPath
 try {
-    foreach ($TagName in $Tags) {
+    foreach ($TagName in $Version) {
         Write-Host ""
         Write-Host "===================================================="
-        Write-Host " Creating image for tag: $TagName"
+        Write-Host " Creating image for version: $TagName"
         Write-Host "===================================================="
 
         $ImageName       = "${BaseImageName}:${TagName}"
