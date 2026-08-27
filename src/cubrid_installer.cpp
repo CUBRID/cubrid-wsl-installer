@@ -21,6 +21,8 @@
 #pragma comment(lib, "Advapi32.lib")
 
 const char *CUBRIDInstaller::START_UP_REGISTRY_KEY_PATH = "Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+const char *CUBRIDInstaller::STARTUP_APPROVED_REGISTRY_KEY_PATH =
+	"Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run";
 const std::string CUBRIDInstaller::MSI_INSTALL_REG_KEY_PATH = "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall";
 const std::string CUBRIDInstaller::BUNDLE_INSTALL_REG_KEY_PATH =
 	"SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall";
@@ -29,6 +31,7 @@ static Logger &logger = Logger::GetInstance();
 static constexpr DWORD ENABLE_FEATURES_TIMEOUT_MS = 3 * 60 * 1000;
 static constexpr DWORD CREATE_DEMODB_TIMEOUT_MS = 5 * 60 * 1000;
 static const char *STARTUP_RUN_VALUE_NAME = "CUBRID_WSL_TrayApp";
+static const char *STARTUP_RUN_VALUE_NAME_STARTER = "CUBRID_WSL_Starter";
 
 namespace
 {
@@ -352,41 +355,80 @@ bool CUBRIDInstaller::InstallWslAndCubrid (const InstallOptions &options)
   return true;
 }
 
-bool CUBRIDInstaller::RegisterTrayApp (const std::string &trayAppPath)
+void CUBRIDInstaller::ClearStartupApprovedFlag (const char *valueName)
 {
-  logger.LogInfo ("Registering Tray Application to Windows Startup: " + trayAppPath);
-
-  if (!std::filesystem::exists (trayAppPath))
+  if (!SystemUtil::CheckRegistryValueExists (HKEY_CURRENT_USER, STARTUP_APPROVED_REGISTRY_KEY_PATH, valueName))
     {
-      logger.LogError ("Tray application not found at: " + trayAppPath);
+      return;
+    }
+
+  if (SystemUtil::DeleteRegistryValue (HKEY_CURRENT_USER, STARTUP_APPROVED_REGISTRY_KEY_PATH, valueName))
+    {
+      logger.LogInfo ("Cleared startup approved state for " + std::string (valueName) + ".");
+    }
+  else
+    {
+      logger.LogWarning ("Failed to clear startup approved state for " + std::string (valueName) + ".");
+    }
+}
+
+bool CUBRIDInstaller::RegisterStartupEntry (const char *valueName, const std::string &exePath,
+    const char *description)
+{
+  logger.LogInfo ("Registering " + std::string (description) + " to Windows Startup: " + exePath);
+
+  if (!std::filesystem::exists (exePath))
+    {
+      logger.LogError (std::string (description) + " not found at: " + exePath);
       return false;
     }
 
-  std::string regValue = "\"" + trayAppPath + "\"";
-  if (SystemUtil::SetRegistryValueString (HKEY_CURRENT_USER, START_UP_REGISTRY_KEY_PATH,
-					  STARTUP_RUN_VALUE_NAME, regValue))
+  std::string regValue = "\"" + exePath + "\"";
+  if (SystemUtil::SetRegistryValueString (HKEY_CURRENT_USER, START_UP_REGISTRY_KEY_PATH, valueName, regValue))
     {
-      logger.LogInfo ("Successfully registered tray application to Windows Startup: " + regValue);
+      logger.LogInfo ("Successfully registered " + std::string (description) + " to Windows Startup: " + regValue);
+      ClearStartupApprovedFlag (valueName);
       return true;
     }
 
-  logger.LogError ("Failed to register tray application to Windows Startup.");
+  logger.LogError ("Failed to register " + std::string (description) + " to Windows Startup.");
   return false;
+}
+
+bool CUBRIDInstaller::UnregisterStartupEntry (const char *valueName, const char *description)
+{
+  logger.LogInfo ("Unregistering " + std::string (description) + " from Windows Startup");
+
+  ClearStartupApprovedFlag (valueName);
+
+  if (SystemUtil::DeleteRegistryValue (HKEY_CURRENT_USER, START_UP_REGISTRY_KEY_PATH, valueName))
+    {
+      logger.LogInfo ("Successfully unregistered " + std::string (description) + " from Windows Startup");
+      return true;
+    }
+
+  logger.LogWarning ("Failed to unregister " + std::string (description) + " from Windows Startup");
+  return false;
+}
+
+bool CUBRIDInstaller::RegisterTrayApp (const std::string &trayAppPath)
+{
+  return RegisterStartupEntry (STARTUP_RUN_VALUE_NAME, trayAppPath, "tray application");
 }
 
 bool CUBRIDInstaller::UnregisterTrayApp()
 {
-  logger.LogInfo ("Unregistering Tray Application from Windows Startup");
+  return UnregisterStartupEntry (STARTUP_RUN_VALUE_NAME, "tray application");
+}
 
-  if (SystemUtil::DeleteRegistryValue (HKEY_CURRENT_USER, START_UP_REGISTRY_KEY_PATH,
-				       STARTUP_RUN_VALUE_NAME))
-    {
-      logger.LogInfo ("Successfully unregistered tray application from Windows Startup");
-      return true;
-    }
+bool CUBRIDInstaller::RegisterStarterApp (const std::string &starterAppPath)
+{
+  return RegisterStartupEntry (STARTUP_RUN_VALUE_NAME_STARTER, starterAppPath, "starter application");
+}
 
-  logger.LogWarning ("Failed to unregister tray application from Windows Startup");
-  return false;
+bool CUBRIDInstaller::UnregisterStarterApp()
+{
+  return UnregisterStartupEntry (STARTUP_RUN_VALUE_NAME_STARTER, "starter application");
 }
 
 std::string CUBRIDInstaller::GetWslPath()

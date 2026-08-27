@@ -194,6 +194,40 @@ extern "C" {
       }
   }
 
+  __declspec (dllexport) UINT __stdcall RegisterStarterApp (MSIHANDLE hInstall)
+  {
+    SetupMsiContext (hInstall);
+    logger.LogInfo ("Registering Starter Application...");
+
+    std::string installDir;
+
+    if (!SystemUtil::GetRegistryValueString (HKEY_CURRENT_USER, REGISTRY_KEY_PATH, REGISTRY_VALUE_NAME_INSTALL_DIR,
+	installDir))
+      {
+	logger.LogError ("Failed to get InstallDir from registry");
+	return ERROR_INSTALL_FAILURE;
+      }
+
+    std::string starterAppPath = (std::filesystem::path (installDir) / CUB_STARTER_APP_FILE).string();
+    logger.LogInfo ("RegisterStarterApp: Starter App Path: " + starterAppPath);
+
+    if (!std::filesystem::exists (starterAppPath))
+      {
+	logger.LogError ("Starter application not found at: " + starterAppPath);
+	return ERROR_INSTALL_FAILURE;
+      }
+
+    CUBRIDInstaller installer;
+    if (installer.RegisterStarterApp (starterAppPath))
+      {
+	logger.LogInfo ("Starter application registered successfully to Windows Startup.");
+	return ERROR_SUCCESS;
+      }
+
+    logger.LogError ("Failed to register starter application to Windows Startup.");
+    return ERROR_INSTALL_FAILURE;
+  }
+
   __declspec (dllexport) UINT __stdcall LaunchTrayApp (MSIHANDLE hInstall)
   {
     SetupMsiContext (hInstall);
@@ -368,6 +402,7 @@ extern "C" {
       }
 
     installer.UnregisterTrayApp();
+    installer.UnregisterStarterApp();
 
     if (!installPath.empty())
       {
@@ -642,24 +677,36 @@ static std::string PrepareDemodbScript()
 	  "#!/bin/bash\n"
 	  ". ~/.cubrid.sh\n"
 	  "DEMODB_NAME=demodb\n"
+	  "DEMO_DIR=\"$CUBRID/demo\"\n"
+	  "DEMO_SCRIPT=\"$DEMO_DIR/make_cubrid_demo.sh\"\n"
+	  "\n"
+	  "LOADDB_OPTS=\"\"\n"
+	  "if grep -q -- '--no-user-specified-name' \"$DEMO_SCRIPT\" 2>/dev/null; then\n"
+	  "    LOADDB_OPTS=\"--no-user-specified-name\"\n"
+	  "fi\n"
+	  "\n"
+	  "echo \"CUBRID=$CUBRID\"\n"
+	  "echo \"CUBRID_DATABASES=$CUBRID_DATABASES\"\n"
+	  "echo \"loaddb options: [$LOADDB_OPTS]\"\n"
+	  "cubrid_rel 2>&1 | head -1\n"
 	  "\n"
 	  "chown -R cubrid:cubrid \"$CUBRID_DATABASES\"\n"
 	  "echo \"Initializing database $DEMODB_NAME...\"\n"
 	  "\n"
 	  "if [ ! -d \"$CUBRID_DATABASES/$DEMODB_NAME\" ]; then\n"
-	  "    echo \"Demo database directory does not exist. Creating it...\" >&2\n"
+	  "    echo \"Demo database directory does not exist. Creating it...\"\n"
 	  "    mkdir -p \"$CUBRID_DATABASES/$DEMODB_NAME\"\n"
 	  "fi\n"
 	  "\n"
-	  "cd \"$CUBRID_DATABASES/$DEMODB_NAME\"\n"
+	  "cd \"$CUBRID_DATABASES/$DEMODB_NAME\" || exit 1\n"
 	  "\n"
-	  "if ! cubrid createdb --db-volume-size=100M --log-volume-size=100M $DEMODB_NAME en_US.utf8 > /dev/null 2>&1; then\n"
-	  "    echo \"Failed to create demo database ($DEMODB_NAME).\" >&2\n"
+	  "if ! cubrid createdb --db-volume-size=100M --log-volume-size=100M $DEMODB_NAME en_US.utf8 2>&1; then\n"
+	  "    echo \"Failed to create demo database ($DEMODB_NAME).\"\n"
 	  "    exit 1\n"
 	  "fi\n"
 	  "\n"
-	  "if ! cubrid loaddb -u dba -s $CUBRID/demo/demodb_schema -d $CUBRID/demo/demodb_objects $DEMODB_NAME > /dev/null 2>&1; then\n"
-	  "    echo \"Failed to load demo database data.\" >&2\n"
+	  "if ! cubrid loaddb -u dba -s \"$DEMO_DIR/demodb_schema\" -d \"$DEMO_DIR/demodb_objects\" $LOADDB_OPTS $DEMODB_NAME 2>&1; then\n"
+	  "    echo \"Failed to load demo database data.\"\n"
 	  "    exit 1\n"
 	  "fi\n"
 	  "\n"

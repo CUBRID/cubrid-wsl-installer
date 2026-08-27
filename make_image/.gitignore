@@ -1,3 +1,4 @@
 tar_images/
 targz_images/
 cubrid-docker/
+.build/

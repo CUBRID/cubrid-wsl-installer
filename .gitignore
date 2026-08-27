@@ -8,4 +8,4 @@ cubrid_test.pfx
 test/__pycache__/
 test/scenario_result.txt
 test/scenario_detail.log
-
+*.orig
