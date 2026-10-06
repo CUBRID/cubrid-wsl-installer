@@ -7,10 +7,22 @@
          otherwise fetch and hard-reset it to the remote default branch, so a
          build always uses the latest upstream recipe.
       2) stage the version directory into .build\<VERSION>, copy
-         docker-entrypoint.sh over the one the version ships, and append the
-         "CUBRID For WSL" overlay to a copy of its Dockerfile.
+         docker-entrypoint.sh over the one the version ships, rewrite the
+         engine download URL in a copy of its Dockerfile, and append the
+         "CUBRID For WSL" overlay to it.
       3) build cubrid-wsl2:<VERSION> image with docker build from that staging
-         directory.
+         directory, labelled with the full engine version it fetched.
+
+    By default the engine tarball comes from the newest nightly build of the
+    requested version; -Release pins the published <VERSION>_latest tarball
+    instead. Either way the URL the upstream Dockerfile hardcodes is replaced,
+    so the only thing that decides which engine lands in the image is this
+    script - see Resolve-EngineBuild.
+
+    The full engine version (e.g. 11.4.6.1963-0e7d3c1) is recorded as the
+    image label 'cubrid.version'. create_image.ps1 reads it back from there
+    and writes it next to the published tar.gz, which is how build.bat learns
+    what to name the installer.
 
     The clone is treated as a read-only build artifact: nothing is ever copied
     into it, so the reset in step 1 can always succeed and every version is
@@ -30,26 +42,53 @@
 .PARAMETER Version
     CUBRID versions to build, default ('11.4'). Positional, so
     `.\build_image.ps1 10.2` works, and aliased to -v to match build.bat.
-    Any version directory present in the cubrid-docker repository is valid,
-    e.g. -v 10.2,11.3
+    Several can be given at once, e.g. -v 10.2,11.3
+
+    A version may name a whole line or one exact nightly build; anything
+    less than a full build name resolves to the newest build under it:
+
+      11.4                  newest 11.4 nightly
+      11.5.0                newest 11.5.0.* nightly
+      11.5.0.2632           that build
+      11.5.0.2632-e17fdab   that exact directory
+
+    Whatever is passed also names the image tag (cubrid-wsl2:<VERSION>) and
+    the os_image\<VERSION>\ directory, so two builds of the same line can be
+    kept side by side by naming them precisely. The Dockerfile is always
+    taken from the <major>.<minor> recipe; a line newer than every
+    directory the repository ships (11.5 and up today) builds from the
+    newest one it has - see Resolve-BuildDir.
     Versions below 10.2 are rejected (see MinSupportedTag below).
 
 .PARAMETER Repo
         cubrid-docker repository URL. default https://github.com/CUBRID/cubrid-docker.git.
 
+.PARAMETER Release
+    Build from the published <VERSION>_latest tarball on ftp.cubrid.org
+    instead of the newest nightly build. The full version then reads
+    '<VERSION>-latest' (e.g. 11.4-latest), because that is all the release
+    URL discloses.
+
+.PARAMETER NoClean
+    Reuse the BuildKit cache and the local base image: drops both --no-cache
+    and --pull. Builds are clean by default because 'dnf -y update' and the
+    package installs keep the same cache key however stale their results
+    get. Use this for quick iteration, and combine with -NoCache / -Pull to
+    re-enable one of them.
+
 .PARAMETER NoCache
     Append --no-cache to docker build so the BuildKit cache is bypassed for
-    this run. Independent switch; combine freely with other options.
+    this run. On by default; meaningful together with -NoClean.
 
 .PARAMETER Pull
     Append --pull to docker build so the FROM base image is re-fetched from
-    the registry even if a local copy already exists. Independent switch.
+    the registry even if a local copy already exists. On by default;
+    meaningful together with -NoClean.
 
 .PARAMETER Clean
-    Convenience switch that implies both -NoCache and -Pull. Equivalent to
-    `-NoCache -Pull`. Useful when the user just wants a clean rebuild without
-    remembering both flag names. Combining with -NoCache / -Pull is harmless
-    (the effect is OR-ed).
+    Kept for compatibility: a clean build (-NoCache -Pull) is the default,
+    so this switch no longer changes anything. It still forces both flags on
+    even when -NoClean is given.
 
 .PARAMETER SkipRepoUpdate
     Skip the fetch / reset step and build from the clone as it currently is.
@@ -65,14 +104,20 @@
 .EXAMPLE
     PS> .\build_image.ps1 -Repo 'https://github.com/CUBRID/cubrid-docker.git'
 .EXAMPLE
-    # Force fresh layers but keep the existing base image:
-    PS> .\build_image.ps1 -NoCache
+    # Published 11.4_latest tarball instead of tonight's build:
+    PS> .\build_image.ps1 11.4 -Release
 .EXAMPLE
-    # Re-pull the base image only, reuse cached layers:
-    PS> .\build_image.ps1 -Pull
+    # Newest nightly of a patch level:
+    PS> .\build_image.ps1 11.5.0
 .EXAMPLE
-    # Fully clean rebuild (= -NoCache -Pull):
-    PS> .\build_image.ps1 -Clean
+    # One exact build (quote it; PowerShell would read 11.4 as a number):
+    PS> .\build_image.ps1 '11.5.0.2632-e17fdab'
+.EXAMPLE
+    # Reuse cached layers for a quick iteration:
+    PS> .\build_image.ps1 -NoClean
+.EXAMPLE
+    # Cached layers, but re-pull the base image:
+    PS> .\build_image.ps1 -NoClean -Pull
 #>
 
 [CmdletBinding()]
@@ -83,14 +128,21 @@ param(
     [object[]]$Version = @('11.4'),
     [Parameter(Position = 1)]
     [string]$Repo = 'https://github.com/CUBRID/cubrid-docker.git',
+    [switch]$Release,
+    [switch]$NoClean,
     [switch]$NoCache,
     [switch]$Pull,
     [switch]$Clean,
     [switch]$SkipRepoUpdate
 )
 
-$useNoCache = $NoCache.IsPresent -or $Clean.IsPresent
-$usePull    = $Pull.IsPresent    -or $Clean.IsPresent
+# Clean by default. The engine layer re-runs on its own once the rewritten
+# URL changes, but the layers above it - 'dnf -y update', the package
+# installs, the base image itself - keep the same cache key forever while
+# what they produce goes stale, so a cached build ships month-old OS
+# packages under a fresh engine.
+$useNoCache = $NoCache.IsPresent -or $Clean.IsPresent -or (-not $NoClean.IsPresent)
+$usePull    = $Pull.IsPresent    -or $Clean.IsPresent -or (-not $NoClean.IsPresent)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -99,6 +151,9 @@ $ErrorActionPreference = 'Stop'
 # FROM centos:7, whose package mirrors are retired, so they cannot be built
 # any more and are deliberately out of scope.
 $MinSupportedTag = [version]'10.2'
+
+# Where both the nightly builds and the published _latest tarballs live.
+$FtpEngineRoot = 'http://ftp.cubrid.org/CUBRID_Engine'
 
 # ------------------------------------------------------------------
 # Appended to a *copy* of each version's Dockerfile. ASCII only: it is
@@ -198,12 +253,48 @@ function ConvertTo-VersionTag {
     return [string]$Value
 }
 
+function Get-TagNumber {
+    <#
+        Numeric part of a tag, as a [version]. A tag is one to four dotted
+        numbers with an optional -<shorthash> suffix, so all four accepted
+        forms reduce to a number that can be compared and sorted:
+
+          11.5                  -> 11.5
+          11.5.0                -> 11.5.0
+          11.5.0.2632           -> 11.5.0.2632
+          11.5.0.2632-e17fdab   -> 11.5.0.2632
+
+        Returns $null when the tag is not of that shape.
+    #>
+    param([Parameter(Mandatory)][string]$Tag)
+
+    if ($Tag -notmatch '^(\d+(?:\.\d+){1,3})(?:-[0-9a-fA-F]+)?$') { return $null }
+    $parsed = $null
+    if (-not [version]::TryParse($Matches[1], [ref]$parsed)) { return $null }
+    return $parsed
+}
+
+function Get-RecipeTag {
+    <#
+        The <major>.<minor> a tag belongs to, which is the granularity
+        cubrid-docker keeps its Dockerfiles at. '11.5.0.2632-e17fdab' and
+        '11.5' both build from the 11.5 recipe.
+    #>
+    param([Parameter(Mandatory)][string]$Tag)
+
+    $number = Get-TagNumber -Tag $Tag
+    return "$($number.Major).$($number.Minor)"
+}
+
 function Test-SupportedTag {
     param([Parameter(Mandatory)][string]$Tag)
 
-    $parsed = $null
-    if (-not [version]::TryParse($Tag, [ref]$parsed)) {
-        throw "Tag '$Tag' is not a CUBRID version number (expected e.g. 10.2, 11.4)."
+    $parsed = Get-TagNumber -Tag $Tag
+    if ($null -eq $parsed) {
+        throw @"
+Tag '$Tag' is not a CUBRID version number.
+Expected one of: 11.4 | 11.5.0 | 11.5.0.2632 | 11.5.0.2632-e17fdab
+"@
     }
     if ($parsed -lt $MinSupportedTag) {
         throw @"
@@ -212,6 +303,133 @@ Tag '$Tag' is not supported. CUBRID For WSL supports $MinSupportedTag and later.
 those images can no longer be built.
 "@
     }
+}
+
+function Resolve-EngineBuild {
+    <#
+        Which engine tarball to build from, and the full version string that
+        names it. Both layouts put the version in the file name, so the full
+        version and the URL are resolved together and always agree:
+
+          nightly  <root>/nightly/daily_build/<FULL>/drop/CUBRID-<FULL>-Linux.x86_64.tar.gz
+          release  <root>/<TAG>_latest/CUBRID-<TAG>-latest-Linux.x86_64.tar.gz
+
+        A release URL discloses no build number, so its full version is just
+        '<TAG>-latest' - which is what the installer is then named after.
+
+        The tag may name a whole line or one exact build; everything shorter
+        than a full directory name resolves to the newest build under it:
+
+          11.5                -> newest 11.5.*
+          11.5.0              -> newest 11.5.0.*
+          11.5.0.2632         -> the 11.5.0.2632-<hash> build
+          11.5.0.2632-e17fdab -> exactly that build
+    #>
+    param([Parameter(Mandatory)][string]$Tag)
+
+    if ($Release) {
+        # ftp.cubrid.org publishes one _latest per <major>.<minor>, so a tag
+        # any more precise than that cannot be honoured. Building the minor
+        # line instead would hand back a different engine than was asked for.
+        $recipe = Get-RecipeTag -Tag $Tag
+        if ($Tag -ne $recipe) {
+            throw @"
+-Release cannot build '$Tag': releases are published per <major>.<minor>.
+Use '-v $recipe -Release' for the published $recipe release, or drop
+-Release to build '$Tag' from the nightly archive.
+"@
+        }
+        $full = "$Tag-latest"
+        return [pscustomobject]@{
+            FullVersion = $full
+            Url         = "$FtpEngineRoot/${Tag}_latest/CUBRID-$full-Linux.x86_64.tar.gz"
+        }
+    }
+
+    $index = "$FtpEngineRoot/nightly/daily_build/"
+    Write-Host "Resolving the latest nightly build of $Tag ..."
+
+    $html = (Invoke-WebRequest -Uri $index -UseBasicParsing).Content
+    $all = [regex]::Matches($html, 'href="(\d+(?:\.\d+){1,3}-[0-9a-fA-F]+)/"') |
+                ForEach-Object { $_.Groups[1].Value } |
+                Select-Object -Unique
+
+    # A tag matches a directory it names outright, or one it is a prefix of.
+    # The separator is required so that '11.4' does not also match '11.40.*',
+    # and '11.5.0.263' does not match '11.5.0.2632-...'.
+    $dirs = @($all | Where-Object {
+        $_ -eq $Tag -or $_.StartsWith("$Tag.") -or $_.StartsWith("$Tag-")
+    })
+    if ($dirs.Count -eq 0) {
+        throw @"
+No nightly build matching '$Tag' found under $index
+Pass a whole line (11.5), a patch level (11.5.0), a build (11.5.0.2632) or
+an exact directory (11.5.0.2632-e17fdab). For the published release of a
+<major>.<minor> line, use -Release instead.
+"@
+    }
+
+    # Sort on the numeric part only. As strings '10.2.18.9024' sorts below
+    # '10.2.9.0867', which would pick a months-old build.
+    $full = $dirs | Sort-Object { Get-TagNumber -Tag $_ } | Select-Object -Last 1
+    if ($dirs.Count -gt 1) {
+        Write-Host "  $($dirs.Count) builds match '$Tag'; taking the newest."
+    }
+
+    return [pscustomobject]@{
+        FullVersion = $full
+        Url         = "$index$full/drop/CUBRID-$full-Linux.x86_64.tar.gz"
+    }
+}
+
+function Resolve-BuildDir {
+    <#
+        Directory in the clone whose Dockerfile builds $Tag.
+
+        A version newer than anything the repository ships falls back to the
+        newest directory it has: nightly builds appear for the development
+        line (11.5 today) long before cubrid-docker grows a directory for it,
+        and the recipes differ only in the engine tarball they fetch - which
+        New-WslBuildContext rewrites per build anyway. A gap *below* the
+        newest directory is a typo, not a new release line, so it still
+        fails.
+    #>
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [Parameter(Mandatory)][string]$Tag
+    )
+
+    # cubrid-docker keeps one directory per <major>.<minor>, so a tag naming
+    # an exact build (11.5.0.2632-e17fdab) looks up the 11.5 recipe.
+    $recipe = Get-RecipeTag -Tag $Tag
+
+    $exact = Join-Path $Path $recipe
+    if (Test-Path $exact) { return $exact }
+
+    $dirs = Get-ChildItem -Directory -Path $Path |
+                ForEach-Object {
+                    $parsed = $null
+                    if ([version]::TryParse($_.Name, [ref]$parsed)) {
+                        [pscustomobject]@{ Name = $_.Name; Version = $parsed }
+                    }
+                } |
+                Sort-Object Version
+    if (-not $dirs) {
+        throw "No CUBRID version directories found in '$Path'."
+    }
+
+    $newest = @($dirs)[-1]
+    if ([version]$recipe -lt $newest.Version) {
+        $available = (@($dirs) | ForEach-Object { $_.Name }) -join ', '
+        throw @"
+Build directory not found: $exact
+Version '$recipe' does not exist in the cubrid-docker repository.
+Available versions: $available
+"@
+    }
+
+    Write-Host "cubrid-docker has no '$recipe' directory; building from '$($newest.Name)' (the newest it ships)."
+    return (Join-Path $Path $newest.Name)
 }
 
 function Get-RemoteDefaultRef {
@@ -283,13 +501,15 @@ Please remove it and retry:
 
 function New-WslBuildContext {
     <#
-        Copy one version directory out of the clone and lay the WSL overlay on
-        top of the copy. Building from here keeps the clone pristine.
+        Copy one version directory out of the clone, point its Dockerfile at
+        the engine tarball we resolved, and lay the WSL overlay on top of the
+        copy. Building from here keeps the clone pristine.
     #>
     param(
         [Parameter(Mandatory)][string]$SourceDir,
         [Parameter(Mandatory)][string]$StagingDir,
-        [Parameter(Mandatory)][string]$EntrypointSh
+        [Parameter(Mandatory)][string]$EntrypointSh,
+        [Parameter(Mandatory)][string]$DownloadUrl
     )
 
     if (Test-Path $StagingDir) { Remove-Item -Recurse -Force $StagingDir }
@@ -306,6 +526,22 @@ function New-WslBuildContext {
     # copy is enough - and the clone keeps its original.
     Copy-Item -Force $EntrypointSh (Join-Path $StagingDir 'docker-entrypoint.sh')
 
+    # Repoint the engine download. The whole URL is replaced rather than the
+    # ENV behind it, because only 11.4 builds the URL from ENV
+    # (${VERSION_PATH} / ${CUBRID_VERSION}) - 10.2 through 11.3 hardcode the
+    # directory in the wget line. Matching http://...-Linux.x86_64.tar.gz
+    # covers both, and stops short of the quotes 11.4 wraps the URL in.
+    $urlPattern = 'http://ftp\.cubrid\.org/CUBRID_Engine/\S*?CUBRID-\S*?-Linux\.x86_64\.tar\.gz'
+    $content = Get-Content -Path $dockerfile -Raw
+    if ($content -notmatch $urlPattern) {
+        throw @"
+No CUBRID engine download URL found in $dockerfile
+The upstream Dockerfile layout changed; update `$urlPattern in New-WslBuildContext.
+"@
+    }
+    $content -replace $urlPattern, $DownloadUrl |
+        Set-Content -Path $dockerfile -Encoding Ascii -NoNewline
+
     Add-Content -Path $dockerfile -Value $WslOverlay -Encoding Ascii
 
     return $StagingDir
@@ -314,12 +550,16 @@ function New-WslBuildContext {
 function Invoke-DockerBuild {
     param(
         [Parameter(Mandatory)][string[]]$Tags,
-        [Parameter(Mandatory)][string]  $Context
+        [Parameter(Mandatory)][string]  $Context,
+        [Parameter(Mandatory)][string]  $FullVersion
     )
     if ($Tags.Count -lt 1) {
         throw "Invoke-DockerBuild: at least one tag is required"
     }
     $buildArgs = @() + $commonBuildFlags
+    # Travels with the image, so create_image.ps1 can read the engine version
+    # back no matter how long after the build it runs.
+    $buildArgs += @('--label', "cubrid.version=$FullVersion")
     foreach ($t in $Tags) {
         $buildArgs += @('-t', $t)
     }
@@ -357,7 +597,7 @@ if ($useNoCache) { $commonBuildFlags += '--no-cache' }
 if ($usePull)    { $commonBuildFlags += '--pull' }
 
 Write-Host ""
-Write-Host "Build options: NoCache=$useNoCache  Pull=$usePull  Clean=$($Clean.IsPresent)"
+Write-Host "Build options: NoCache=$useNoCache  Pull=$usePull  Release=$($Release.IsPresent)"
 
 foreach ($TagName in $Version) {
     Write-Host ""
@@ -365,24 +605,21 @@ foreach ($TagName in $Version) {
     Write-Host " Building image for version: $TagName"
     Write-Host "===================================================="
 
-    $BuildDirPath = Join-Path $DockerPath $TagName
-    if (-not (Test-Path $BuildDirPath)) {
-        $available = (Get-ChildItem -Directory -Path $DockerPath |
-                        Where-Object { $_.Name -ne '.git' } |
-                        ForEach-Object { $_.Name }) -join ', '
-        throw @"
-Build directory not found: $BuildDirPath
-Version '$TagName' does not exist in the cubrid-docker repository.
-Available versions: $available
-"@
-    }
+    $engine = Resolve-EngineBuild -Tag $TagName
+    Write-Host "Engine version: $($engine.FullVersion)"
+    Write-Host "Engine tarball: $($engine.Url)"
+
+    $BuildDirPath = Resolve-BuildDir -Path $DockerPath -Tag $TagName
 
     $StagingPath = New-WslBuildContext -SourceDir $BuildDirPath `
                                        -StagingDir (Join-Path $StagingRoot $TagName) `
-                                       -EntrypointSh $DockerEntrypoint
-    Write-Host "Build context: $StagingPath (upstream $TagName + WSL overlay)"
+                                       -EntrypointSh $DockerEntrypoint `
+                                       -DownloadUrl $engine.Url
+    Write-Host "Build context: $StagingPath ($(Split-Path -Leaf $BuildDirPath) recipe + WSL overlay)"
 
-    Invoke-DockerBuild -Tags @("cubrid-wsl2:$TagName") -Context $StagingPath
+    Invoke-DockerBuild -Tags @("cubrid-wsl2:$TagName") `
+                       -Context $StagingPath `
+                       -FullVersion $engine.FullVersion
 }
 
 Write-Host ""

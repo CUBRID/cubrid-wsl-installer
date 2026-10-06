@@ -18,6 +18,10 @@ set VERSION_FILE=%SHELL_DIR%VERSION
 REM make_image\create_image.ps1 publishes each version to os_image\<version>\,
 REM always under the fixed name WiX harvests. Recomputed after -v is parsed.
 set INSTALL_IMAGE_TAR_GZ_FILE=cubrid-wsl2-latest.tar.gz
+REM Sits beside that image and holds the full engine version it was built
+REM from, as create_image.ps1 recorded it. The installer EXE is named after
+REM its contents; the file name itself is fixed.
+set FULL_VERSION_STAMP=cubrid-wsl2-latest.fullversion
 set OS_IMAGE_VERSION_DIR=%OS_IMAGE_DIR%%CUBRID_VERSION%\
 set IMAGE_STAMP_FILE=%OS_IMAGE_DIR%cubrid-wsl2-latest.version
 set MSI_STAMP_FILE=%BUILD_DIR%CUBRID_Base.version
@@ -34,8 +38,7 @@ if "%~1"=="" goto :END_PARSE_ARGS
 if /i "%~1"=="-t" (
     if "%~2"=="" (
         echo [ERROR] Missing value for -t
-        call :USAGE
-        exit /b 1
+        goto :ARG_ERROR
     )
     set BUILD_TYPE=%~2
     shift
@@ -45,8 +48,7 @@ if /i "%~1"=="-t" (
 if /i "%~1"=="-v" (
     if "%~2"=="" (
         echo [ERROR] Missing value for -v
-        call :USAGE
-        exit /b 1
+        goto :ARG_ERROR
     )
     set CUBRID_VERSION=%~2
     shift
@@ -56,8 +58,7 @@ if /i "%~1"=="-v" (
 if /i "%~1"=="-c" (
     if "%~2"=="" (
         echo [ERROR] Missing value for -c
-        call :USAGE
-        exit /b 1
+        goto :ARG_ERROR
     )
     set IMAGE_COPY_OPTION=%~2
     shift
@@ -91,6 +92,34 @@ if not "%IMAGE_COPY_OPTION%"=="0" if not "%IMAGE_COPY_OPTION%"=="1" (
 
 set OS_IMAGE_VERSION_DIR=%OS_IMAGE_DIR%%CUBRID_VERSION%\
 
+REM Resolve the full engine version the EXE is named after. This has to run
+REM before the file names are assembled below, and outside the image-copy
+REM block: '-t 3' jumps straight to :EXE_BUILD and never copies anything.
+REM os_image\<version>\ is what create_image.ps1 wrote; os_image\ is the
+REM already-staged copy '-c 0' reuses. Without either, fall back to the
+REM short tag so the build still produces a sanely named EXE.
+set CUBRID_FULL_VERSION=%CUBRID_VERSION%
+set FULL_VERSION_FILE=%OS_IMAGE_VERSION_DIR%%FULL_VERSION_STAMP%
+if not exist "%FULL_VERSION_FILE%" set FULL_VERSION_FILE=%OS_IMAGE_DIR%%FULL_VERSION_STAMP%
+if exist "%FULL_VERSION_FILE%" (
+    for /f "usebackq delims=" %%i in ("%FULL_VERSION_FILE%") do set CUBRID_FULL_VERSION=%%i
+    REM The os_image\ root stamp belongs to whichever version was staged last.
+    REM Naming the EXE from a leftover would label it after an engine this
+    REM build is not bundling, so only a stamp of %CUBRID_VERSION% is trusted:
+    REM the version itself (-v names an exact build), or one of its builds.
+    REM The '.'/'-' matters - without it -v 11.4 would accept an 11.40 stamp.
+    if /i not "!CUBRID_FULL_VERSION!"=="%CUBRID_VERSION%" (
+        echo !CUBRID_FULL_VERSION!| findstr /b /c:"%CUBRID_VERSION%." /c:"%CUBRID_VERSION%-" >nul
+        if errorlevel 1 (
+            echo [WARN] Ignoring engine version stamp '!CUBRID_FULL_VERSION!': not a CUBRID %CUBRID_VERSION% build.
+            set CUBRID_FULL_VERSION=%CUBRID_VERSION%
+        )
+    )
+) else (
+    echo [WARN] No engine version stamp found ^(%FULL_VERSION_STAMP%^).
+    echo [WARN] Naming the installer after '%CUBRID_VERSION%'. Run make_image\create_image.ps1 -v %CUBRID_VERSION% to record the exact version.
+)
+
 echo [INFO] Checking CMake...
 "%CMAKE_PATH%" --version >nul 2>&1
 if %errorLevel% neq 0 (
@@ -111,11 +140,13 @@ if EXIST "%SHELL_DIR%.git" (
 )
 
 echo [BUILD INFO] Build Type     : %BUILD_TYPE%
-echo [BUILD INFO] CUBRID Version : %CUBRID_VERSION%
+echo [BUILD INFO] CUBRID Version : %CUBRID_VERSION% ^(engine !CUBRID_FULL_VERSION!^)
 echo [BUILD INFO] WSL Version : v%VERSION%-%EXTRA_VERSION%
 echo.
 
-set INSTALL_FILE_NAME=CUBRID-%CUBRID_VERSION%-For-WSL-%VERSION%-%EXTRA_VERSION%-win64.exe
+REM The EXE is the only artifact that ships, so it carries the full engine
+REM version. The MSI keeps its old name - it is an intermediate.
+set INSTALL_FILE_NAME=CUBRID-!CUBRID_FULL_VERSION!-For-WSL-win64.exe
 set MSI_FILE_NAME=CUBRID-%CUBRID_VERSION%-For-WSL-%VERSION%-%EXTRA_VERSION%-win64.msi
 
 if "%BUILD_TYPE%"=="3" (
@@ -155,6 +186,9 @@ if "%IMAGE_COPY_OPTION%"=="1" (
                 del /f /q "%OS_IMAGE_DIR%%INSTALL_IMAGE_TAR_GZ_FILE%".temp
             )
             > "%IMAGE_STAMP_FILE%" echo %CUBRID_VERSION%
+            if exist "%OS_IMAGE_VERSION_DIR%%FULL_VERSION_STAMP%" (
+                copy /y "%OS_IMAGE_VERSION_DIR%%FULL_VERSION_STAMP%" "%OS_IMAGE_DIR%%FULL_VERSION_STAMP%" >nul
+            )
             echo [INFO] %CUBRID_VERSION%\%INSTALL_IMAGE_TAR_GZ_FILE% copied.
         )
     ) else (
@@ -276,6 +310,14 @@ if errorlevel 1 exit /b 1
 
 GOTO :EOF
 
+:ARG_ERROR
+REM Reached by goto, never fallen into. The missing-value branches above jump
+REM here instead of calling :USAGE in place: in cmd.exe a 'call' followed by
+REM 'exit /b N' inside a *nested* parenthesised block loses N, and the script
+REM would report the error and still exit 0.
+call :USAGE
+exit /b 1
+
 :FAIL
 echo [ERROR] WiX build failed.
 exit /b 1
@@ -377,6 +419,9 @@ echo                    1  Build only MSI
 echo                    2  Build only C++ binaries
 echo                    3  Build only Bundle EXE
 echo   -v ^<version^>  CUBRID version (default: 11.4)
+echo                    Whatever make_image\create_image.ps1 was run with:
+echo                    11.4, 11.5.0, 11.5.0.2632 or 11.5.0.2632-e17fdab.
+echo                    It names the os_image\^<version^>\ directory to read.
 echo   -c ^<0^|1^>      Install-image copy option (default: 1)
 echo                    0  Reuse the staged install image; the build aborts
 echo                       unless it was staged for the same -v version
@@ -387,4 +432,7 @@ echo Examples:
 echo   build.bat
 echo   build.bat -t 1
 echo   build.bat -v 11.4 -t 0 -c 0
+echo.
+echo The EXE is named after the full engine version recorded by
+echo make_image\create_image.ps1, e.g. CUBRID-11.4.6.1963-0e7d3c1-For-WSL-win64.exe
 GOTO :EOF
