@@ -25,6 +25,10 @@ set FULL_VERSION_STAMP=cubrid-wsl2-latest.fullversion
 set OS_IMAGE_VERSION_DIR=%OS_IMAGE_DIR%%CUBRID_VERSION%\
 set IMAGE_STAMP_FILE=%OS_IMAGE_DIR%cubrid-wsl2-latest.version
 set MSI_STAMP_FILE=%BUILD_DIR%CUBRID_Base.version
+REM The engine actually packaged into CUBRID_Base.msi. '-t 3' bundles that
+REM MSI as it is, so this - not whatever os_image\ holds by then - is what
+REM the EXE must be named after.
+set MSI_FULL_STAMP_FILE=%BUILD_DIR%CUBRID_Base.fullversion
 set WIX_DIR=C:\Program Files (x86)\WiX Toolset v3.14\bin
 set WIX_SDK_DIR=C:\Program Files (x86)\WiX Toolset v3.14\SDK
 call :FINDEXEC "git.exe" GIT_PATH "C:\Program Files\Git\bin\git.exe"
@@ -92,22 +96,50 @@ if not "%IMAGE_COPY_OPTION%"=="0" if not "%IMAGE_COPY_OPTION%"=="1" (
 
 set OS_IMAGE_VERSION_DIR=%OS_IMAGE_DIR%%CUBRID_VERSION%\
 
-REM Resolve the full engine version the EXE is named after. This has to run
-REM before the file names are assembled below, and outside the image-copy
-REM block: '-t 3' jumps straight to :EXE_BUILD and never copies anything.
-REM os_image\<version>\ is what create_image.ps1 wrote; os_image\ is the
-REM already-staged copy '-c 0' reuses. Without either, fall back to the
-REM short tag so the build still produces a sanely named EXE.
+REM Resolve the full engine version the EXE is named after. Read it from the
+REM artifact that actually ends up inside the EXE - never from a newer one
+REM that happens to be lying around under the same -v tag:
+REM
+REM   -t 3   bundles the MSI already in build\ as it is, so the engine is
+REM          the one recorded when that MSI was built. Reading os_image\
+REM          here would name the EXE after an engine exported afterwards
+REM          while the MSI still carried the older one.
+REM   -c 0   packages the image staged in os_image\, so read the stamp that
+REM          was staged with it - not os_image\<version>\, which may have
+REM          been re-exported since.
+REM   else   os_image\<version>\ is about to be copied in, so that is what
+REM          the MSI and the EXE will carry.
+REM
+REM The short-tag checks (:VERIFY_IMAGE_VERSION / :VERIFY_MSI_VERSION) cannot
+REM catch any of this: both sides read '11.4' either way.
+REM
+REM This has to run before the file names are assembled below, and outside
+REM the image-copy block: '-t 3' jumps straight to :EXE_BUILD and never
+REM copies anything. Without a stamp, fall back to the short tag - a less
+REM precise name is fine, a name claiming the wrong engine is not.
 set CUBRID_FULL_VERSION=%CUBRID_VERSION%
-set FULL_VERSION_FILE=%OS_IMAGE_VERSION_DIR%%FULL_VERSION_STAMP%
-if not exist "%FULL_VERSION_FILE%" set FULL_VERSION_FILE=%OS_IMAGE_DIR%%FULL_VERSION_STAMP%
-if exist "%FULL_VERSION_FILE%" (
-    for /f "usebackq delims=" %%i in ("%FULL_VERSION_FILE%") do set CUBRID_FULL_VERSION=%%i
-    REM The os_image\ root stamp belongs to whichever version was staged last.
-    REM Naming the EXE from a leftover would label it after an engine this
-    REM build is not bundling, so only a stamp of %CUBRID_VERSION% is trusted:
-    REM the version itself (-v names an exact build), or one of its builds.
-    REM The '.'/'-' matters - without it -v 11.4 would accept an 11.40 stamp.
+if "%BUILD_TYPE%"=="3" (
+    set FULL_VERSION_FILE=%MSI_FULL_STAMP_FILE%
+    set FULL_VERSION_ORIGIN=the MSI in build\
+    set FULL_VERSION_HINT=Rebuild the MSI to record it. e.g.^) build.bat -t 1 -v %CUBRID_VERSION%
+) else if "%IMAGE_COPY_OPTION%"=="0" (
+    set FULL_VERSION_FILE=%OS_IMAGE_DIR%%FULL_VERSION_STAMP%
+    set FULL_VERSION_ORIGIN=the staged image in os_image\
+    set FULL_VERSION_HINT=Drop '-c 0' so the %CUBRID_VERSION% image and its version are staged.
+) else (
+    set FULL_VERSION_FILE=%OS_IMAGE_VERSION_DIR%%FULL_VERSION_STAMP%
+    set FULL_VERSION_ORIGIN=os_image\%CUBRID_VERSION%\
+    set FULL_VERSION_HINT=Run make_image\create_image.ps1 -v %CUBRID_VERSION% to record it.
+)
+if exist "!FULL_VERSION_FILE!" (
+    for /f "usebackq delims=" %%i in ("!FULL_VERSION_FILE!") do set CUBRID_FULL_VERSION=%%i
+    REM Whichever of the three it came from, the stamp may be a leftover from
+    REM another -v - os_image\ holds whatever was staged last, and build\ an
+    REM MSI from an earlier run. Naming the EXE from one of those would label
+    REM it after an engine this build is not bundling, so only a stamp of
+    REM %CUBRID_VERSION% is trusted: the version itself (-v can name an exact
+    REM build), or one of its builds. The '.'/'-' matters - without it
+    REM -v 11.4 would accept an 11.40 stamp.
     if /i not "!CUBRID_FULL_VERSION!"=="%CUBRID_VERSION%" (
         echo !CUBRID_FULL_VERSION!| findstr /b /c:"%CUBRID_VERSION%." /c:"%CUBRID_VERSION%-" >nul
         if errorlevel 1 (
@@ -116,8 +148,8 @@ if exist "%FULL_VERSION_FILE%" (
         )
     )
 ) else (
-    echo [WARN] No engine version stamp found ^(%FULL_VERSION_STAMP%^).
-    echo [WARN] Naming the installer after '%CUBRID_VERSION%'. Run make_image\create_image.ps1 -v %CUBRID_VERSION% to record the exact version.
+    echo [WARN] No engine version recorded for !FULL_VERSION_ORIGIN!.
+    echo [WARN] Naming the installer after '%CUBRID_VERSION%' only. !FULL_VERSION_HINT!
 )
 
 echo [INFO] Checking CMake...
@@ -298,6 +330,9 @@ echo [INFO] Finalizing Multi-language MSI...
 copy /Y CUBRID_Base.msi %MSI_FILE_NAME%
 del CUBRID_Ko.msi wix\cubrid_base.pdb wix\cubrid_ko.pdb
 > "%MSI_STAMP_FILE%" echo %CUBRID_VERSION%
+REM Pin the engine this MSI contains, so a later '-t 3' names the EXE after
+REM it even if os_image\ has moved on to a newer build of the same -v tag.
+> "%MSI_FULL_STAMP_FILE%" echo !CUBRID_FULL_VERSION!
 
 echo [INFO] Multi-language MSI build complete.
 

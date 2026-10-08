@@ -86,8 +86,8 @@ echo ----------------------------------------
 powershell -ExecutionPolicy Bypass -File "%SHELL_DIR%make_image\create_image.ps1" -v "%CUBRID_VERSION%"
 if errorlevel 1 (
     echo.
-    echo [ERROR] create_image.ps1 failed. The Docker image from step 1 is still there,
-    echo [ERROR] so re-running this script will not rebuild it from scratch for nothing.
+    echo [ERROR] create_image.ps1 failed.
+    echo [ERROR] Please check build image in Docker by build_image.ps1.
     exit /b 1
 )
 
