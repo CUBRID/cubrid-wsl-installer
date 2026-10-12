@@ -37,6 +37,17 @@ Ensure you have the following installed before building:
 
 ### 2. How to Build
 
+**Everything at once:** `create_wsl.bat` runs the three steps below in order and stops at the first failure. It needs Docker Desktop running, and takes only `-v` and `-o`:
+
+```cmd
+create_wsl.bat -v 11.4
+create_wsl.bat -v 11.4 -o D:\release
+```
+
+`-o` also copies the finished installer EXE into that folder — created if missing, and an EXE already there is replaced. Only the EXE is copied, not the MSI. A relative path is taken from the current directory.
+
+The rest of this section covers the same steps run individually, which is what you want for anything more specific — a release build, an MSI only, or reusing an image you already staged.
+
 **Before building — prepare the CUBRID WSL2 image (required):**
 `build.bat` does **not** build the Linux image itself. It bundles a **pre-built CUBRID WSL2 image** (`cubrid-wsl2-latest.tar.gz`) that must already exist; during the build it is copied automatically from `make_image/targz_images/` into `os_image/<cubrid-version>`.
 
@@ -47,8 +58,22 @@ powershell -ExecutionPolicy Bypass -File build_image.ps1
 powershell -ExecutionPolicy Bypass -File create_image.ps1
 cd ..
 ```
-*   `build_image.ps1` — clones `CUBRID/cubrid-docker` and builds the `cubrid-wsl2:<version>` Docker image. (use option `-Clean` for a fresh rebuild, `-Tags` or `-v` for other versions)
-*   `create_image.ps1` — exports the image's root filesystem to `os_image/version/cubrid-wsl2-latest.tar.gz`, which `build.bat` then consumes. (use option `-Tags` or `-v` for other versions)
+*   `build_image.ps1` — clones `CUBRID/cubrid-docker` and builds the `cubrid-wsl2:<version>` Docker image. By default the engine comes from the **newest nightly build** of that version on `ftp.cubrid.org`; add `-Release` to use the published `<version>_latest` tarball instead. Builds are clean (`--no-cache --pull`) by default — pass `-NoClean` to reuse cached layers while iterating.
+*   `create_image.ps1` — exports the image's root filesystem to `os_image/<version>/cubrid-wsl2-latest.tar.gz`, which `build.bat` then consumes, and records the exact engine version beside it in `cubrid-wsl2-latest.fullversion`.
+
+`-v` (alias `-Tags`) selects the version, and accepts anything from a whole line down to one exact nightly build:
+
+| `-v` | builds |
+| --- | --- |
+| `11.4` | newest `11.4` nightly |
+| `11.5.0` | newest `11.5.0.*` nightly |
+| `11.5.0.2632` | that build |
+| `11.5.0.2632-e17fdab` | that exact directory |
+| `11.4 -Release` | the published `11.4_latest` tarball |
+
+Whatever is passed also names the image tag and the `os_image/<version>/` directory, so builds of the same line can be kept side by side by naming them precisely. Pass the same `-v` to `create_image.ps1` and `build.bat`. Quote any value containing a `-`, and note that `-Release` only accepts a `<major>.<minor>` since releases are published per minor line.
+
+> **Note**: The Dockerfile is always taken from the `<major>.<minor>` recipe. A line newer than any directory `cubrid-docker` ships (11.5 and up at the time of writing) is built from the newest recipe the repository has, with the engine download repointed at the requested version.
 
 Then build the installer with the `build.bat` script in the root directory from a Developer Command Prompt for Visual Studio.
 > **Note**: The script automatically locates `cmake.exe`, `candle.exe`, `light.exe`, and `torch.exe` from `PATH` or their default install locations.
@@ -58,7 +83,9 @@ Then build the installer with the `build.bat` script in the root directory from 
     build.bat
     ```
 
- The build artifact (`CUBRID-<cubrid-version>-For-WSL-<wsl-version>-<product-version>-<git-revision>-win64.exe`) is generated in the `build` directory at the project root.
+ The build artifact (`CUBRID-<engine-version>-For-WSL-win64.exe`) is generated in the `build` directory at the project root — for example `CUBRID-11.4.6.1963-0e7d3c1-For-WSL-win64.exe` for a nightly build, or `CUBRID-11.4-latest-For-WSL-win64.exe` for a `-Release` one.
+
+`<engine-version>` is read from `os_image/<version>/cubrid-wsl2-latest.fullversion`, so the EXE is always named after the engine actually bundled in it. If that file is missing the build falls back to the short `-v` tag and warns. The installer's own version (`VERSION` + git revision) is not in the file name; it is compiled in and reported by the tray app.
 
 
 ## License

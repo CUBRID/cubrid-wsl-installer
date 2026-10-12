@@ -12,8 +12,9 @@
       5) compress with tar -czf. (use bsdtar included in Windows 10/11).
       6) move tar / tar.gz file to tar_images / targz_images directory.
       7) publish the tar.gz to ..\os_image\<TAG>\cubrid-wsl2-latest.tar.gz,
-         overwriting whatever is there. build.bat -v <TAG> picks the image up
-         from that per-version directory.
+         overwriting whatever is there, and record the full engine version
+         beside it in cubrid-wsl2-latest.fullversion. build.bat -v <TAG>
+         picks both up from that per-version directory.
       8) remove container.
 
     Only the artifacts of the tags being processed are replaced, so images
@@ -26,6 +27,11 @@
       - the published tar.gz is always cubrid-wsl2-latest.tar.gz, because WiX
         harvests it by that name (CUB_WSL_IMAGE_FILE). The version lives in
         the directory name, not the file name.
+
+    The full engine version (e.g. 11.4.6.1963-0e7d3c1) cannot be recovered
+    from either name, so it is read from the image label build_image.ps1 set
+    and written out as cubrid-wsl2-latest.fullversion. That file is what
+    build.bat names the installer after.
 
 .PARAMETER Version
     CUBRID versions to process, default ('11.4'). Positional, so
@@ -113,12 +119,30 @@ function ConvertTo-VersionTag {
     return [string]$Value
 }
 
+function Get-TagNumber {
+    <#
+        Numeric part of a tag, as a [version]. Kept in step with
+        build_image.ps1: a tag is one to four dotted numbers with an
+        optional -<shorthash>, so '11.5.0.2632-e17fdab' reduces to
+        11.5.0.2632. Returns $null when the tag is not of that shape.
+    #>
+    param([Parameter(Mandatory)][string]$Tag)
+
+    if ($Tag -notmatch '^(\d+(?:\.\d+){1,3})(?:-[0-9a-fA-F]+)?$') { return $null }
+    $parsed = $null
+    if (-not [version]::TryParse($Matches[1], [ref]$parsed)) { return $null }
+    return $parsed
+}
+
 function Test-SupportedTag {
     param([Parameter(Mandatory)][string]$Tag)
 
-    $parsed = $null
-    if (-not [version]::TryParse($Tag, [ref]$parsed)) {
-        throw "Tag '$Tag' is not a CUBRID version number (expected e.g. 10.2, 11.4)."
+    $parsed = Get-TagNumber -Tag $Tag
+    if ($null -eq $parsed) {
+        throw @"
+Tag '$Tag' is not a CUBRID version number.
+Expected one of: 11.4 | 11.5.0 | 11.5.0.2632 | 11.5.0.2632-e17fdab
+"@
     }
     if ($parsed -lt $MinSupportedTag) {
         throw @"
@@ -146,6 +170,31 @@ Build it first:
     Write-Host "Found image $ImageName ($imageId)"
 }
 
+function Get-ImageEngineVersion {
+    <#
+        Full engine version build_image.ps1 stamped onto the image, e.g.
+        11.4.6.1963-0e7d3c1 or 11.4-latest. Images built before the label
+        existed report nothing, so fall back to the tag - the installer is
+        then named the way it always was.
+    #>
+    param(
+        [Parameter(Mandatory)][string]$ImageName,
+        [Parameter(Mandatory)][string]$Tag
+    )
+
+    # The label key is quoted with Go raw-string backticks, not double quotes:
+    # PowerShell strips double quotes out of a native command's arguments, and
+    # docker would then see an unquoted .Config.Labels cubrid.version.
+    $full = (& docker inspect --format '{{index .Config.Labels `cubrid.version`}}' $ImageName 2>$null |
+                Out-String).Trim()
+    if ([string]::IsNullOrWhiteSpace($full) -or $full -eq '<no value>') {
+        Write-Host "Image $ImageName carries no 'cubrid.version' label; falling back to '$Tag'."
+        Write-Host "Rebuild it with build_image.ps1 to record the exact engine version."
+        return $Tag
+    }
+    return $full
+}
+
 $ShellPath   = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $TarDir      = Join-Path $ShellPath 'tar_images'
 $TarGzDir    = Join-Path $ShellPath 'targz_images'
@@ -154,6 +203,9 @@ $OsImageRoot = Join-Path (Split-Path -Parent $ShellPath) 'os_image'
 # Name WiX harvests the image by (CUB_WSL_IMAGE_FILE in CMakeLists.txt).
 # It never carries the version - os_image\<TAG>\ does.
 $InstallImageName = 'cubrid-wsl2-latest.tar.gz'
+
+# Full engine version of that image, for build.bat to name the installer by.
+$FullVersionFileName = 'cubrid-wsl2-latest.fullversion'
 
 Write-Host "ShellPath   = $ShellPath"
 Write-Host "TarDir      = $TarDir"
@@ -198,6 +250,9 @@ try {
 
         Test-DockerImage -ImageName $ImageName -Tag $TagName
 
+        $FullVersion = Get-ImageEngineVersion -ImageName $ImageName -Tag $TagName
+        Write-Host "Engine version: $FullVersion"
+
         $nameFilter = 'name=^/' + [regex]::Escape($ContainerName) + '$'
         $existing = (docker ps -aq -f $nameFilter) | Out-String
         $existing = $existing.Trim()
@@ -239,6 +294,12 @@ try {
             $installImageDest = Join-Path $osImageVersionDir $InstallImageName
             Copy-Item -Force $tarGzDest $installImageDest
             Write-Host "Install image path:      $installImageDest"
+
+            # -NoNewline: build.bat reads this with a for /f loop, which would
+            # otherwise be fed a trailing blank line.
+            $fullVersionDest = Join-Path $osImageVersionDir $FullVersionFileName
+            Set-Content -Path $fullVersionDest -Value $FullVersion -Encoding Ascii -NoNewline
+            Write-Host "Engine version stamp:    $fullVersionDest ($FullVersion)"
         } finally {
             Write-Host "Removing container $ContainerName"
             Invoke-Native -Description "docker rm $ContainerName" -- docker rm $ContainerName
