@@ -68,7 +68,7 @@ cd ..
 | `11.4` | newest `11.4` nightly |
 | `11.5.0` | newest `11.5.0.*` nightly |
 | `11.5.0.2632` | that build |
-| `'11.5.0.2632-e17fdab'` | that exact directory |
+| `11.5.0.2632-e17fdab` | that exact directory |
 | `11.4 -Release` | the published `11.4_latest` tarball |
 
 Whatever is passed also names the image tag and the `os_image/<version>/` directory, so builds of the same line can be kept side by side by naming them precisely. Pass the same `-v` to `create_image.ps1` and `build.bat`. Quote any value containing a `-`, and note that `-Release` only accepts a `<major>.<minor>` since releases are published per minor line.
